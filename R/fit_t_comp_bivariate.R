@@ -1,13 +1,15 @@
 phylo = pbtree(n=20)
-sig2.matrix = matrix(c(0.05,0.025,0.025,0.05),ncol=2)
-s.term = matrix(c(0.01,0,0,0.01),ncol=2)
-pars = list(sig2.matrix,s.term)
+sig2.matrix = matrix(c(0.5,0.25,0.25,0.5),ncol=2)
+r.term = matrix(c(0.4,0.2,0.2,0.4),ncol=2)
+pars = list(sig2.matrix,r.term)
 pars
 root.values = c(0,0)
 Nsegments = 1000
-model = "MC"
+model = "DD"
 
-sim_t_comp<-function(phylo,pars,root.values,Nsegments=1000,model="BM,OU,MC"){
+simulation = sim_t_comp(phylo,pars,root.values,1000,"DD")
+
+sim_t_comp<-function(phylo,pars,root.values,Nsegments=1000,model="BM,OU,MC,DD"){
   require(phytools)
   require(MASS)
   
@@ -28,6 +30,10 @@ sim_t_comp<-function(phylo,pars,root.values,Nsegments=1000,model="BM,OU,MC"){
     if (length(pars)!=2){stop("MC simulation must use 2 parameters for sig2 and S respectively")}
     if (ncol(pars[[1]])!=ncol(pars[[2]])){stop("MC simulation parameters must be two equal size matrices")}
   }
+  if (model=="DD"){
+    if (length(pars)!=2){stop("DD simulation must use 2 parameters for sig2 and R respectively")}
+    if (ncol(pars[[1]])!=ncol(pars[[2]])){stop("DD simulation parameters must be two equal size matrices")}
+  }
   
   ##store parameters provided by user depending on model provided
   sig2=pars[[1]]
@@ -37,6 +43,9 @@ sim_t_comp<-function(phylo,pars,root.values,Nsegments=1000,model="BM,OU,MC"){
   }
   if (model=="MC"){
     s.term.matrix = pars[[2]]
+  }
+  if (model=="DD"){
+    r.term.matrix = pars[[2]]
   }
   
   ##check that root.value is a vector and assign to a vector
@@ -119,22 +128,28 @@ sim_t_comp<-function(phylo,pars,root.values,Nsegments=1000,model="BM,OU,MC"){
   }
   
   ##which model is being simulated?
-  if(is.na(match(model,c("BM","OU","MC")))){stop("model not specified correctly, must be 'BM', 'OU' or 'MC'")}
+  if(is.na(match(model,c("BM","OU","MC","DD")))){stop("model not specified correctly, must be 'BM', 'OU', 'MC' or 'DD'")}
   
   ##define simulator for each time step of the model
-  if (model == "BM") {
+  if (model=="BM"){
     simvalueBM = function(sig2.matrix, start.value.vector, seglen) {
       x = start.value.vector + t(t(mvrnorm(n=2 ,mu=0, Sigma=1))%*%chol(sig2.matrix*seglen))
     }
   }
-  if (model == "OU") {
+  if (model=="OU"){
     simvalueOU = function(sig2.matrix, theta.matrix, mu.vector, start.value.vector, seglen) {
       x = start.value.vector + theta.matrix%*%(mu.vector-start.value.vector)*seglen + t(t(mvrnorm(n=2 ,mu=0, Sigma=1))%*%chol(sig2.matrix*seglen))
     }
   }
-  if (model == "MC") {
+  if (model=="MC"){
     simvalueMC = function(sig2.matrix, s.term.matrix, mu.vector, start.value.vector, seglen) {
       x = start.value.vector + s.term.matrix%*%(mu.vector-start.value.vector)*seglen + t(t(mvrnorm(n=2 ,mu=0, Sigma=1))%*%chol(sig2.matrix*seglen))
+    }
+  }
+  if (model=="DD"){
+    simvalueDD = function(sig2.matrix, r.term.matrix, branch.number, start.value.vector, seglen) {
+      adj.sig2.matrix = sig2.matrix * exp(r.term.matrix*branch.number)
+      x = start.value.vector + t(t(mvrnorm(n=2 ,mu=0, Sigma=1))%*%chol(adj.sig2.matrix*seglen))
     }
   }
   
@@ -142,7 +157,9 @@ sim_t_comp<-function(phylo,pars,root.values,Nsegments=1000,model="BM,OU,MC"){
   N<-Nsegments
   seglength<-tail(nodeDist,n=1)/N
   
-  if(seglength > min(phylo$edge.length) { stop("increase Nsegments (smallest segment is larger than smallest branch length)")} 
+  if (seglength > min(phylo$edge.length)){
+    stop("increase Nsegments (smallest segment is larger than smallest branch length)")
+  } 
   
   #these create the objects where results are stored--so far, these store univarate data; would need to be updated to store multivariate data
   masterbranch.1<-list()
@@ -206,7 +223,11 @@ sim_t_comp<-function(phylo,pars,root.values,Nsegments=1000,model="BM,OU,MC"){
           sv<-simvalueOU(sig2,theta.matrix,mu.vector,start.value,segsize)
         }
         if(model=="MC"){
-          sv<-simvalueMC(sig2,s.term.matrix,mu.value,start.value,segsize)}
+          sv<-simvalueMC(sig2,s.term.matrix,mu.value,start.value,segsize)
+        }
+        if(model=="DD"){
+          sv<-simvalueDD(sig2,r.term.matrix,branchespresent,start.value,segsize)
+        }
         masterbranch.1[[i]][[j]]<-c(masterbranch.1[[i]][[j]],sv[1])
         masterbranch.2[[i]][[j]]<-c(masterbranch.2[[i]][[j]],sv[2])
       }
