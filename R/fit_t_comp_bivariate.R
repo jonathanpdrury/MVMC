@@ -142,6 +142,7 @@ sim_t_comp<-function(phylo,pars,root.values,Nsegments=1000,model="BM,OU,MC"){
   N<-Nsegments
   seglength<-tail(nodeDist,n=1)/N
   
+  if(seglength > min(phylo$edge.length) { stop("increase Nsegments (smallest segment is larger than smallest branch length)")} 
   
   #these create the objects where results are stored--so far, these store univarate data; would need to be updated to store multivariate data
   masterbranch.1<-list()
