@@ -40,10 +40,10 @@ log_likelihood_multivariate_BM = function(tree,sig2,root,sim){
   vcv.tree = vcv(tree)
   vcv.sig2.product = kronecker(sig2,vcv.tree)
   det.product = det(vcv.sig2.product)
-  data.root.difference = (sim_values - D*root)
+  data.root.difference = (sim_values - (D%*%matrix(root)))
   
   exponent = exp(-1/(2*(t(data.root.difference)%*%inv(vcv.sig2.product)%*%data.root.difference)))
-  denominator = sqrt(((2*pi)^(length(tree$tip.label))*length(root))*det.product)
+  denominator = sqrt(((2*pi)^(length(tree$tip.label)*length(root)))*det.product)
   log.likelihood = log10(exponent / denominator)
   return(log.likelihood)
 }
