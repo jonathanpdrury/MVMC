@@ -17,7 +17,8 @@ log_likelihood_univariate_BM = function(tree,sig2,root,sim){
 log_likelihood_multivariate_BM = function(tree,sig2,root,sim){
   require(phytools)
   require(matlib)
-  
+ 
+##should be sorted by tree$tip.label  
   sim_values = c()
   for (i in 1:length(root)){
     for (j in 1:length(tree$tip.label)){
@@ -42,9 +43,15 @@ log_likelihood_multivariate_BM = function(tree,sig2,root,sim){
   det.product = det(vcv.sig2.product)
   data.root.difference = (sim_values - (D%*%matrix(root)))
   
-  exponent = exp(-1/(2*(t(data.root.difference)%*%inv(vcv.sig2.product)%*%data.root.difference)))
+  #exponent = exp(-1/(2*(t(data.root.difference)%*%inv(vcv.sig2.product)%*%data.root.difference)))
+  exponent = exp(-0.5*(t(data.root.difference)%*%inv(vcv.sig2.product)%*%data.root.difference))
+
   denominator = sqrt(((2*pi)^(length(tree$tip.label)*length(root)))*det.product)
-  log.likelihood = log10(exponent / denominator)
+  
+  
+  #log.likelihood = log10(exponent / denominator)
+  #log.likelihood = log(exponent / denominator)
+  log.likelihood =  -0.5*(t(data.root.difference)%*%inv(vcv.sig2.product)%*%data.root.difference)-0.5*log(det.product)-length(tree$tip.label)*length(root)*log(2*pi)*0.5
   return(log.likelihood)
 }
 

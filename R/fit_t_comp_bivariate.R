@@ -7,7 +7,7 @@ root.values = c(0,0)
 Nsegments = 1000
 model = "DD"
 
-simulation = sim_t_comp(phylo,pars,root.values,1000,"DD")
+#simulation = sim_t_comp(phylo,pars,root.values,1000,"DD")
 
 sim_t_comp<-function(phylo,pars,root.values,Nsegments=1000,model="BM,OU,MC,DD"){
   require(phytools)
