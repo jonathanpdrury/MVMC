@@ -1,4 +1,5 @@
 mv_sim_multiple = function(
+  tree.list,
   tree.sizes,
   sig2.matrices,
   root,
@@ -6,12 +7,18 @@ mv_sim_multiple = function(
   half.lives = NULL,
   OU.theta = NULL,
   Nsim = 100,
-  models = c("BM","OU","MC","DD")
+  model
 ){
   require(phytools)
   ##check parameters are inputted correctly
-  if (!is.numeric(tree.sizes)){
-    stop("tree.sizes must be a vector of the number of tips for the trees in each test.")
+  
+  if (length(tree.sizes)!=length(tree.list)){
+    stop("tree.sizes must be a numeric vector with each number being equal to the equivalent position on tree.list")
+  }
+  for (i in 1:length(tree.list)){
+    if (length(tree.list[[i]])!=Nsim){
+      stop("tree.list must be mulitple lists of length Nsim")
+    }
   }
   if (!is.list(sig2.matrices)){
     stop("sig2.matrices must be a list of only matrices")
@@ -25,8 +32,12 @@ mv_sim_multiple = function(
     stop("root length and sig2 matrices do not match")
   }
   
+  if (!is.element(model,c("BM","OU","MC","DD"))){
+    stop("the only accepted models are BM, OU, MC and DD")
+  }
+  models.present = FALSE
   for (i in c("OU","MC","DD")){
-    if (is.element(i,models)){
+    if (is.element(i,model)){
       models.present = TRUE
       break
     }
@@ -43,30 +54,24 @@ mv_sim_multiple = function(
         stop("pars.format must be a list of only matrices")
       }
     }
-    if (is.element("OU",models)){
+    if (is.element("OU",model)){
       if (!is.numeric(OU.theta)||length(OU.theta)!=ncol(sig2.matrices[[1]])){
         stop("when using the OU model, a vector of theta values must be given.")
       }
     }
   }
-  accepted.models = c("BM","OU","MC","DD")
-  for (i in 1:length(models)){
-    if (!is.element(models[i],accepted.models)){
-      stop("the only accepted models are BM, OU, MC and DD")
-    }
-  }
+  
   
   ##check if wanted and simulate the BM model
-  if (is.element("BM",models)){
+  if (model=="BM"){
     for (i in 1:length(tree.sizes)){
       
       for (j in 1:length(sig2.matrices)){
         temp.data = list()
         
         for (k in 1:Nsim){
-          tree = pbtree(n=tree.sizes[i])
           sim_data = sim_t_comp(
-            tree,
+            tree.list[[i]][[k]],
             list(sig2.matrices[[k]]),
             root,
             10000,
@@ -75,11 +80,29 @@ mv_sim_multiple = function(
           temp.data[[k]] = sim_data
         }
         
+        ##rename data
+        eval(
+          parse(
+            text=paste(
+              "assign('BM_sim_tree_",
+              tree.sizes[i],
+              "_sig2_",
+              j,
+              "',temp.data)",
+              sep=""
+            )
+          )
+        )
+        
         ##save data
         eval(
           parse(
             text=paste(
-              "save(temp.data,file='BM_sim_tree_",
+              "save(BM_sim_tree_",
+              tree.sizes[i],
+              "_sig2_",
+              j,
+              ",file='BM_sim_tree_",
               tree.sizes[i],
               "_sig2_",
               j,
@@ -90,10 +113,8 @@ mv_sim_multiple = function(
         )
       }
     }
-  }
-  
-  ## if other models are used, construct a list of secondary parameters
-  if (models.present){
+  } else {
+    ## if other models are used, construct a list of secondary parameters
     pars.list = list()
     for (i in 1:length(half.lives)){
       pars.list[[i]] = list()
@@ -129,140 +150,211 @@ mv_sim_multiple = function(
         pars.list[[i]][[j]] = pars
       }
     }
-  }
-  
-  ##check if wanted and simulate OU model
-  if (is.element("OU",models)){
-    for (i in 1:length(tree.sizes)){
-      
-      for (j in 1:length(sig2.matrices)){
+    
+    if (model=="OU"){
+      ##check if wanted and simulate OU model
+      for (i in 1:length(tree.sizes)){
         
-        for (k in 1:length(half.lives)){
+        for (j in 1:length(sig2.matrices)){
           
-          for (l in 1:length(pars.list[[k]])){
-            temp.data = list()
-          
-            for (m in 1:Nsim){
-              tree = pbtree(n=tree.sizes[i])
-              sim_data = sim_t_comp(
-                tree,
-                list(sig2.matrices[[j]],pars.list[[k]][[l]],OU.theta),
-                root,
-                10000,
-                "OU"
-              )
-              temp.data[[m]] = sim_data
-            }
+          for (k in 1:length(half.lives)){
             
-            ##save data
-            eval(
-              parse(
-                text=paste(
-                  "save(temp.data,file='OU_sim_tree",
-                  tree.sizes[i],
-                  "_sig2_",
-                  j,
-                  "_half_life_",
-                  half.lives[k],
-                  "_pars_",
-                  l,
-                  ".RData')",
-                  sep=""
+            for (l in 1:length(pars.list[[k]])){
+              temp.data = list()
+              
+              for (m in 1:Nsim){
+                sim_data = sim_t_comp(
+                  tree.list[[i]][[m]],
+                  list(sig2.matrices[[j]],pars.list[[k]][[l]],OU.theta),
+                  root,
+                  10000,
+                  "OU"
+                )
+                temp.data[[m]] = sim_data
+              }
+              
+              ##rename data
+              eval(
+                parse(
+                  text=paste(
+                    "assign('OU_sim_tree_",
+                    tree.sizes[i],
+                    "_sig2_",
+                    j,
+                    "_half_life_",
+                    half.lives[k],
+                    "_pars_",
+                    l,
+                    "',temp.data)",
+                    sep=""
+                  )
                 )
               )
-            )
+              
+              ##save data
+              eval(
+                parse(
+                  text=paste(
+                    "save(OU_sim_tree_",
+                    tree.sizes[i],
+                    "_sig2_",
+                    j,
+                    "_half_life_",
+                    half.lives[k],
+                    "_pars_",
+                    l,
+                    ",file='OU_sim_tree",
+                    tree.sizes[i],
+                    "_sig2_",
+                    j,
+                    "_half_life_",
+                    half.lives[k],
+                    "_pars_",
+                    l,
+                    ".RData')",
+                    sep=""
+                  )
+                )
+              )
+            }
           }
         }
       }
-    }
-  }
-  
-  ##check if wanted and simulate MC model
-  if (is.element("MC",models)){
-    for (i in 1:length(tree.sizes)){
-      
-      for (j in 1:length(sig2.matrices)){
+    } else if (model=="MC"){
+      ##check if wanted and simulate MC model
+      for (i in 1:length(tree.sizes)){
         
-        for (k in 1:length(half.lives)){
+        for (j in 1:length(sig2.matrices)){
           
-          for (l in 1:length(pars.list[[k]])){
-            temp.data = list()
+          for (k in 1:length(half.lives)){
             
-            for (m in 1:Nsim){
-              tree = pbtree(n=tree.sizes[i])
-              sim_data = sim_t_comp(
-                tree,
-                list(sig2.matrices[[j]],pars.list[[k]][[l]]),
-                root,
-                10000,
-                "MC"
-              )
-              temp.data[[m]] = sim_data
-            }
-            
-            ##save data
-            eval(
-              parse(
-                text=paste(
-                  "save(temp.data,file='MC_sim_tree",
-                  tree.sizes[i],
-                  "_sig2_",
-                  j,
-                  "_half_life_",
-                  half.lives[k],
-                  "_pars_",
-                  l,
-                  ".RData')",
-                  sep=""
+            for (l in 1:length(pars.list[[k]])){
+              temp.data = list()
+              
+              for (m in 1:Nsim){
+                sim_data = sim_t_comp(
+                  tree.list[[i]][[k]],
+                  list(sig2.matrices[[j]],pars.list[[k]][[l]]),
+                  root,
+                  10000,
+                  "MC"
+                )
+                temp.data[[m]] = sim_data
+              }
+              
+              ##rename data
+              eval(
+                parse(
+                  text=paste(
+                    "assign('MC_sim_tree_",
+                    tree.sizes[i],
+                    "_sig2_",
+                    j,
+                    "_half_life_",
+                    half.lives[k],
+                    "_pars_",
+                    l,
+                    "',temp.data)",
+                    sep=""
+                  )
                 )
               )
-            )
+              
+              ##save data
+              eval(
+                parse(
+                  text=paste(
+                    "save(MC_sim_tree_",
+                    tree.sizes[i],
+                    "_sig2_",
+                    j,
+                    "_half_life_",
+                    half.lives[k],
+                    "_pars_",
+                    l,
+                    ",file='MC_sim_tree",
+                    tree.sizes[i],
+                    "_sig2_",
+                    j,
+                    "_half_life_",
+                    half.lives[k],
+                    "_pars_",
+                    l,
+                    ".RData')",
+                    sep=""
+                  )
+                )
+              )
+            }
           }
         }
       }
-    }
-  }
-  
-  ##check if wanted and simulate DD model
-  if (is.element("DD",models)){
-    for (i in 1:length(tree.sizes)){
-      
-      for (j in 1:length(sig2.matrices)){
+    } else if (model=="DD"){
+      ##check if wanted and simulate DD model
+      for (i in 1:length(tree.sizes)){
         
-        for (k in 1:length(half.lives)){
+        for (j in 1:length(sig2.matrices)){
           
-          for (l in 1:length(pars.list[[k]])){
-            temp.data = list()
+          for (k in 1:length(half.lives)){
             
-            for (m in 1:Nsim){
-              tree = pbtree(n=tree.sizes[i])
-              sim_data = sim_t_comp(
-                tree,
-                list(sig2.matrices[[j]],pars.list[[k]][[l]]),
-                root,
-                5000,
-                "DD"
-              )
-              temp.data[[m]] = sim_data
-            }
-            
-            ##save data
-            eval(
-              parse(
-                text=paste(
-                  "save(temp.data,file='DD_sim_tree",
-                  tree.sizes[i],
-                  "_sig2_",
-                  j,
-                  "_half_life_",
-                  half.lives[k],
-                  "_pars_",
-                  l,
-                  ".RData')",
-                  sep=""
+            for (l in 1:length(pars.list[[k]])){
+              temp.data = list()
+              
+              for (m in 1:Nsim){
+                sim_data = sim_t_comp(
+                  tree.list[[i]][[k]],
+                  list(sig2.matrices[[j]],pars.list[[k]][[l]]),
+                  root,
+                  5000,
+                  "DD"
+                )
+                temp.data[[m]] = sim_data
+              }
+              
+              ##rename data
+              eval(
+                parse(
+                  text=paste(
+                    "assign('DD_sim_tree_",
+                    tree.sizes[i],
+                    "_sig2_",
+                    j,
+                    "_half_life_",
+                    half.lives[k],
+                    "_pars_",
+                    l,
+                    "',temp.data)",
+                    sep=""
+                  )
                 )
               )
-            )
+              
+              ##save data
+              eval(
+                parse(
+                  text=paste(
+                    "save(DD_sim_tree_",
+                    tree.sizes[i],
+                    "_sig2_",
+                    j,
+                    "_half_life_",
+                    half.lives[k],
+                    "_pars_",
+                    l,
+                    ",file='DD_sim_tree",
+                    tree.sizes[i],
+                    "_sig2_",
+                    j,
+                    "_half_life_",
+                    half.lives[k],
+                    "_pars_",
+                    l,
+                    ".RData')",
+                    sep=""
+                  )
+                )
+              )
+            }
           }
         }
       }
