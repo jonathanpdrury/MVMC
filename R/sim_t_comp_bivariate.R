@@ -36,6 +36,7 @@ sim_t_comp<-function(phylo,pars,root.values,Nsegments=1000,model="BM,OU,MC,DDexp
   }
   if (model=="DDlin"){
     if (length(pars)!=2){stop("DDlin simulation must use 2 parameters for sig2 and slope respectively")}
+    if (ncol(pars[[1]])!=ncol(pars[[2]])){stop("DDlin simulation parameters must be two equal size matrices")}
   }
   
   ##store parameters provided by user depending on model provided
@@ -51,7 +52,7 @@ sim_t_comp<-function(phylo,pars,root.values,Nsegments=1000,model="BM,OU,MC,DDexp
     r.term.matrix = pars[[2]]
   }
   if (model=="DDlin"){
-    slope = pars[[2]]
+    slope.matrix = pars[[2]]
   }
   
   ##check that root.value is a vector and assign to a vector
@@ -247,7 +248,7 @@ sim_t_comp<-function(phylo,pars,root.values,Nsegments=1000,model="BM,OU,MC,DDexp
           sv<-simvalueDDexp(sig2,r.term.matrix,branchespresent,start.value,segsize)
         }
         if(model=="DDlin"){
-          sv<-simvalueDDlin(sig2,slope,branchespresent,start.value,segsize)
+          sv<-simvalueDDlin(sig2,slope.matrix,branchespresent,start.value,segsize)
         }
         masterbranch.1[[i]][[j]]<-c(masterbranch.1[[i]][[j]],sv[1])
         masterbranch.2[[i]][[j]]<-c(masterbranch.2[[i]][[j]],sv[2])
