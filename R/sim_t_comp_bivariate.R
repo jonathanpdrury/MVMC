@@ -5,11 +5,11 @@ pars = list(sig2.matrix,r.term)
 pars
 root.values = c(0,0)
 Nsegments = 1000
-model = "DD"
+model = "DDexp"
 
-#simulation = sim_t_comp(phylo,pars,root.values,1000,"DD")
+#simulation = sim_t_comp(phylo,pars,root.values,1000,"DDexp")
 
-sim_t_comp<-function(phylo,pars,root.values,Nsegments=1000,model="BM,OU,MC,DD"){
+sim_t_comp<-function(phylo,pars,root.values,Nsegments=1000,model="BM,OU,MC,DDexp,DDlin"){
   require(phytools)
   require(MASS)
   
@@ -30,9 +30,12 @@ sim_t_comp<-function(phylo,pars,root.values,Nsegments=1000,model="BM,OU,MC,DD"){
     if (length(pars)!=2){stop("MC simulation must use 2 parameters for sig2 and S respectively")}
     if (ncol(pars[[1]])!=ncol(pars[[2]])){stop("MC simulation parameters must be two equal size matrices")}
   }
-  if (model=="DD"){
-    if (length(pars)!=2){stop("DD simulation must use 2 parameters for sig2 and R respectively")}
-    if (ncol(pars[[1]])!=ncol(pars[[2]])){stop("DD simulation parameters must be two equal size matrices")}
+  if (model=="DDexp"){
+    if (length(pars)!=2){stop("DDexp simulation must use 2 parameters for sig2 and R respectively")}
+    if (ncol(pars[[1]])!=ncol(pars[[2]])){stop("DDexp simulation parameters must be two equal size matrices")}
+  }
+  if (model=="DDlin"){
+    if (length(pars)!=2){stop("DDlin simulation must use 2 parameters for sig2 and slope respectively")}
   }
   
   ##store parameters provided by user depending on model provided
@@ -44,8 +47,11 @@ sim_t_comp<-function(phylo,pars,root.values,Nsegments=1000,model="BM,OU,MC,DD"){
   if (model=="MC"){
     s.term.matrix = pars[[2]]
   }
-  if (model=="DD"){
+  if (model=="DDexp"){
     r.term.matrix = pars[[2]]
+  }
+  if (model=="DDlin"){
+    slope = pars[[2]]
   }
   
   ##check that root.value is a vector and assign to a vector
@@ -128,7 +134,7 @@ sim_t_comp<-function(phylo,pars,root.values,Nsegments=1000,model="BM,OU,MC,DD"){
   }
   
   ##which model is being simulated?
-  if(is.na(match(model,c("BM","OU","MC","DD")))){stop("model not specified correctly, must be 'BM', 'OU', 'MC' or 'DD'")}
+  if(is.na(match(model,c("BM","OU","MC","DDexp","DDlin")))){stop("model not specified correctly, must be 'BM', 'OU', 'MC', 'DDexp', or 'DDlin'")}
   
   ##define simulator for each time step of the model
   if (model=="BM"){
@@ -146,12 +152,24 @@ sim_t_comp<-function(phylo,pars,root.values,Nsegments=1000,model="BM,OU,MC,DD"){
       x = start.value.vector + s.term.matrix%*%(mu.vector-start.value.vector)*seglen + t(t(mvrnorm(n=2 ,mu=0, Sigma=1))%*%chol(sig2.matrix*seglen))
     }
   }
-  if (model=="DD"){
-    simvalueDD = function(sig2.matrix, r.term.matrix, branch.number, start.value.vector, seglen) {
+  if (model=="DDexp"){
+    simvalueDDexp = function(sig2.matrix, r.term.matrix, branch.number, start.value.vector, seglen) {
       adj.sig2.matrix = sig2.matrix * exp(r.term.matrix*branch.number)
       x = start.value.vector + t(t(mvrnorm(n=2 ,mu=0, Sigma=1))%*%chol(adj.sig2.matrix*seglen))
     }
   }
+  if (model=="DDlin"){
+    test.lin = try(chol((sig2.matrix+(slope*length(phylo$tip.label)))))
+    if (class(test.lin)=="try-error"){
+      stop("Error simulating DDlin; choose slope so that sig2!<=0 at present")
+    } else {
+      simvalueDDlin = function(sig2.matrix, slope, branch.number, start.value.vector, seglen) {
+        adj.sig2.matrix = sig2.matrix + (slope*branch.number)
+        x = start.value.vector + t(t(mvrnorm(n=2, mu=0, Sigma=1))%*%chol(adj.sig2.matrix*seglen))
+      }
+    }
+  }
+  
   
   ##define the number of smaller segments to divide a tree into
   N<-Nsegments
@@ -225,8 +243,11 @@ sim_t_comp<-function(phylo,pars,root.values,Nsegments=1000,model="BM,OU,MC,DD"){
         if(model=="MC"){
           sv<-simvalueMC(sig2,s.term.matrix,mu.value,start.value,segsize)
         }
-        if(model=="DD"){
-          sv<-simvalueDD(sig2,r.term.matrix,branchespresent,start.value,segsize)
+        if(model=="DDexp"){
+          sv<-simvalueDDexp(sig2,r.term.matrix,branchespresent,start.value,segsize)
+        }
+        if(model=="DDlin"){
+          sv<-simvalueDDlin(sig2,slope,branchespresent,start.value,segsize)
         }
         masterbranch.1[[i]][[j]]<-c(masterbranch.1[[i]][[j]],sv[1])
         masterbranch.2[[i]][[j]]<-c(masterbranch.2[[i]][[j]],sv[2])
