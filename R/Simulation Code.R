@@ -5,6 +5,7 @@ mv_sim_multiple = function(
   pars.format = NULL,
   half.lives = NULL,
   OU.theta = NULL,
+  DD.root.rate=NULL,
   DD.tip.rate=NULL,
   Nsim = 100,
   model,
@@ -58,18 +59,39 @@ mv_sim_multiple = function(
       }
     }
   } else if (model=="DDexp"||model=="DDlin"){
-    if (!is.list(DD.tip.rate)||length(DD.tip.rate)!=length(sig2.matrices)){
-      stop("DD.tip.rate must be a list the length of sig2.matrices")
-    }
-    for (i in 1:length(DD.tip.rate)){
-      if (!is.list(DD.tip.rate[[i]])){
-        stop("each item of DD.tip.rate must be a list of matrices")
+    if (!is.null(DD.tip.rate)){
+      if (!is.list(DD.tip.rate)||length(DD.tip.rate)!=length(sig2.matrices)){
+        stop("DD.tip.rate must be a list the length of sig2.matrices")
       }
-      for (j in 1:length(DD.tip.rate[[i]])){
-        if (class(DD.tip.rate[[i]][[j]])!="matrix"){
+      for (i in 1:length(DD.tip.rate)){
+        if (!is.list(DD.tip.rate[[i]])){
           stop("each item of DD.tip.rate must be a list of matrices")
         }
+        for (j in 1:length(DD.tip.rate[[i]])){
+          if (class(DD.tip.rate[[i]][[j]])!="matrix"){
+            stop("each item of DD.tip.rate must be a list of matrices")
+          }
+        }
       }
+    } else if (!is.null(DD.root.rate)){
+      if (!is.list(DD.root.rate)||length(DD.root.rate)!=length(sig2.matrices)){
+        stop("DD.root.rate must be a list the length of sig2.matrices")
+      }
+      for (i in 1:length(DD.root.rate)){
+        if (!is.list(DD.root.rate[[i]])){
+          stop("each item of DD.root.rate must be a list of matrices")
+        }
+        for (j in 1:length(DD.root.rate[[i]])){
+          if (class(DD.root.rate[[i]][[j]])!="matrix"){
+            stop("each item of DD.root.rate must be a list of matrices")
+          }
+        }
+      }
+    } else {
+      stop("you must either give the variants of sig2 matrices at the roots (if the change is positive) or at the tips (if the change is negative)")
+    }
+    if (!is.null(DD.tip.rate)&&!is.null(DD.root.rate)){
+      stop("you must only give one of either DD.tip.rate or DD.root.rate.")
     }
   }
   
@@ -357,6 +379,13 @@ mv_sim_multiple = function(
     ##construct list to store parameters
     pars.list = list()
     
+    ##make DD.variable to store DD.tip.rate or DD.root.rate for nicer code when constructing r.term
+    if (!is.null(DD.tip.rate)){
+      DD.variable = DD.tip.rate
+    } else {
+      DD.variable = DD.root.rate
+    }
+    
     ##check if wanted and simulate DDexp model
     for (i in 1:length(tree.list)){
       pars.list[[i]] = list()
@@ -364,13 +393,21 @@ mv_sim_multiple = function(
       
       for (j in 1:length(sig2.matrices)){
         pars.list[[i]][[j]] = list()
-        for (k in 1:length(DD.tip.rate[[j]])){
+        for (k in 1:(length(DD.variable))){
           temp.data = list()
           ##construct r.term/slope depending on the model used
           if (model=="DDexp"){
-            pars.list[[i]][[j]][[k]] = logm((inv(sig2.matrices[[j]])%*%DD.tip.rate[[j]][[k]]),method="Eigen")/length(tree.list[[i]][[k]]$tip.label)
+            if (!is.null(DD.tip.rate)){
+              pars.list[[i]][[j]][[k]] = logm((inv(sig2.matrices[[j]])%*%DD.tip.rate[[j]][[k]]))/length(tree.list[[i]][[k]]$tip.label)
+            } else {
+              pars.list[[i]][[j]][[k]] = logm((inv(DD.root.rate[[j]][[k]])%*%sig2.matrices[[j]]))/length(tree.list[[i]][[k]]$tip.label)
+            }
           } else if (model=="DDlin"){
-            pars.list[[i]][[j]][[k]] = (DD.tip.rate[[j]][[k]]-sig2.matrices[[j]])/length(tree.list[[i]][[k]]$tip.label)
+            if (!is.null(DD.tip.rate)){
+              pars.list[[i]][[j]][[k]] = (DD.tip.rate[[j]][[k]]-sig2.matrices[[j]])/length(tree.list[[i]][[k]]$tip.label)
+            } else {
+              pars.list[[i]][[j]][[k]] = (sig2.matrices[[j]]-DD.root.rate[[j]][[k]])/length(tree.list[[i]][[k]]$tip.label)
+            }
           }
           
           for (m in 1:Nsim){
@@ -384,68 +421,134 @@ mv_sim_multiple = function(
             temp.data[[m]] = sim_data
           }
           
-          ##if values are to be returned, add to the masterlist simulations
-          if (return.values){
-            eval(
-              parse(
-                text=paste(
-                  "masterlist$simulated.values$tree.",
-                  names(tree.list[i]),
-                  "$root.sig2.",
-                  j,
-                  "$tip.sig2.",
-                  k,
-                  " = temp.data",
-                  sep = ""
+          if (!is.null(DD.tip.rate)){
+            ##if values are to be returned, add to the masterlist simulations
+            if (return.values){
+              eval(
+                parse(
+                  text=paste(
+                    "masterlist$simulated.values$tree.",
+                    names(tree.list[i]),
+                    "$root.sig2.",
+                    j,
+                    "$tip.sig2.",
+                    k,
+                    " = temp.data",
+                    sep = ""
+                  )
                 )
               )
-            )
-          }
-          
-          if (save.values){
-            ##rename data
-            eval(
-              parse(
-                text=paste(
-                  "assign('",
-                  model,
-                  "_sim_tree_",
-                  names(tree.list[i]),
-                  "_root_sig2_",
-                  j,
-                  "_tip_sig2_",
-                  k,
-                  "',temp.data)",
-                  sep = ""
-                )
-              )
-            )
+            }
             
-            ##save data
-            eval(
-              parse(
-                text=paste(
-                  "save(",
-                  model,
-                  "_sim_tree_",
-                  names(tree.list[i]),
-                  "_root_sig2_",
-                  j,
-                  "_tip_sig2_",
-                  k,
-                  ",file='",
-                  model,
-                  "_sim_tree",
-                  names(tree.list[i]),
-                  "_root_sig2_",
-                  j,
-                  "_tip_sig2_",
-                  k,
-                  ".RData')",
-                  sep = ""
+            if (save.values){
+              ##rename data
+              eval(
+                parse(
+                  text=paste(
+                    "assign('",
+                    model,
+                    "_sim_tree_",
+                    names(tree.list[i]),
+                    "_root_sig2_",
+                    j,
+                    "_tip_sig2_",
+                    k,
+                    "',temp.data)",
+                    sep = ""
+                  )
                 )
               )
-            )
+              
+              ##save data
+              eval(
+                parse(
+                  text=paste(
+                    "save(",
+                    model,
+                    "_sim_tree_",
+                    names(tree.list[i]),
+                    "_root_sig2_",
+                    j,
+                    "_tip_sig2_",
+                    k,
+                    ",file='",
+                    model,
+                    "_sim_tree",
+                    names(tree.list[i]),
+                    "_root_sig2_",
+                    j,
+                    "_tip_sig2_",
+                    k,
+                    ".RData')",
+                    sep = ""
+                  )
+                )
+              )
+            }
+          } else {
+            ##if values are to be returned, add to the masterlist simulations
+            if (return.values){
+              eval(
+                parse(
+                  text=paste(
+                    "masterlist$simulated.values$tree.",
+                    names(tree.list[i]),
+                    "$tip.sig2.",
+                    j,
+                    "$root.sig2.",
+                    k,
+                    " = temp.data",
+                    sep = ""
+                  )
+                )
+              )
+            }
+            
+            if (save.values){
+              ##rename data
+              eval(
+                parse(
+                  text=paste(
+                    "assign('",
+                    model,
+                    "_sim_tree_",
+                    names(tree.list[i]),
+                    "_tip_sig2_",
+                    j,
+                    "_root_sig2_",
+                    k,
+                    "',temp.data)",
+                    sep = ""
+                  )
+                )
+              )
+              
+              ##save data
+              eval(
+                parse(
+                  text=paste(
+                    "save(",
+                    model,
+                    "_sim_tree_",
+                    names(tree.list[i]),
+                    "_tip_sig2_",
+                    j,
+                    "_root_sig2_",
+                    k,
+                    ",file='",
+                    model,
+                    "_sim_tree",
+                    names(tree.list[i]),
+                    "_tip_sig2_",
+                    j,
+                    "_root_sig2_",
+                    k,
+                    ".RData')",
+                    sep = ""
+                  )
+                )
+              )
+            }
           }
         }
       }
