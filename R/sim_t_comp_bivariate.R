@@ -12,6 +12,7 @@ model = "DDexp"
 sim_t_comp<-function(phylo,pars,root.values,Nsegments=1000,model="BM,OU,MC,DDexp,DDlin"){
   require(phytools)
   require(MASS)
+  require(expm)
   
   #return error if non-ultrametric tree
   if(phylo$Nnode!=(length(phylo$tip.label)-1)){stop("phylo object must be ultrametric")}
@@ -155,7 +156,7 @@ sim_t_comp<-function(phylo,pars,root.values,Nsegments=1000,model="BM,OU,MC,DDexp
   }
   if (model=="DDexp"){
     simvalueDDexp = function(sig2.matrix, r.term.matrix, branch.number, start.value.vector, seglen) {
-      adj.sig2.matrix = sig2.matrix * exp(r.term.matrix*branch.number)
+      adj.sig2.matrix = sig2.matrix %*% expm(r.term.matrix*branch.number)
       x = start.value.vector + t(t(mvrnorm(n=2 ,mu=0, Sigma=1))%*%chol(adj.sig2.matrix*seglen))
     }
   }
