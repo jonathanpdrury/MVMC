@@ -12,6 +12,8 @@ for (i in 1:length(tree.sizes)){
   }
 }
 
+#min(diff(sort(branching.times(tree))))
+
 matrix1 = matrix(c(1,0,0,0.5),ncol=2)
 matrix2 = matrix(c(1,0.5,0.5,0.5),ncol=2)
 sig2.matrices = list(matrix1,matrix2)
