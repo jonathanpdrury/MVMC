@@ -19,7 +19,7 @@ sig2.matrices = list(matrix1,matrix2)
 ##when DD with a positive secondary term
 DDpos.matrix1 = matrix(c(0.01,0,0,0.005),ncol=2)
 DDpos.matrix2 = matrix(c(0.01,0.005,0.005,0.005),ncol=2)
-DDpos.sig2.matrices = list(matrix1,matrix2)
+DDpos.sig2.matrices = list(DDpos.matrix1,DDpos.matrix2)
 
 pars1 = matrix(c("pars.1",0,0,"pars.2"))
 pars2 = matrix(c("pars.1","cov.pars","cov.pars","pars.2"))
