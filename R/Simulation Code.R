@@ -1,3 +1,18 @@
+###This function takes sim_t_comp bivariate and simulates it over multiple iterations with different parameter values.
+###tree.list must take the form of a list the length of how many tree sizes you want to simulate, with values being a list of Nsim trees the same size.
+###sig2.matrices is a list of each sig2 matrix to be simulated
+###root is the initial value of each simulation (for now is constant among all simulations)
+###pars.format and half lives are needed if using the OU or MC model
+###half lives is a vector for the half life of pars.1 in the alpha or S term if OU or MC respectively.
+###pars.format is used to build the rest of the matrix, 'pars.2' is half of 'pars.1' and 'cov.pars' is 3/4 of 'pars.2', a minus sign can be added in front to make the parameter negative
+###If the model is OU, OU.theta is a vector defining the theta values, currently is fixed and cannot be varied.
+###When using the DD model, define DD.root.rate and DD.tip.rate for the sig2 matrix at the root or tip and the R and slope term will be calculated for the DDexp and DDlin model respectively by using the equivalent sig2.matrices value as the rate at the root/tip not defined
+###DD.tip.rate and DD.root.rate should be a list the length of sig2.matrices, with each value being a list containing matrices for each variation of sig2
+###Nsim is the amount of times each variant will be simulated
+###model is a string defining the model used and can be 'BM', 'OU', 'MC', 'DDexp' or 'DDlin'
+###If return.values is TRUE, this function will return a 'masterlist' of each simulation result, the trees used and the parameters calculated.
+###If save.values is TRUE, this function will save each simulation to the working directory as well as the calculated parameter values and trees used.
+###Both return.values and save.values can be TRUE in the same run of the simulation
 mv_sim_multiple = function(
   tree.list,
   sig2.matrices,
