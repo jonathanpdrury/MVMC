@@ -1,14 +1,3 @@
-phylo = pbtree(n=20)
-sig2.matrix = matrix(c(0.5,0.25,0.25,0.5),ncol=2)
-r.term = matrix(c(0.4,0.2,0.2,0.4),ncol=2)
-pars = list(sig2.matrix,r.term)
-pars
-root.values = c(0,0)
-Nsegments = 1000
-model = "DDexp"
-
-#simulation = sim_t_comp(phylo,pars,root.values,1000,"DDexp")
-
 sim_t_comp<-function(phylo,pars,root.values,Nsegments=1000,model="BM,OU,MC,DDexp,DDlin"){
   require(phytools)
   require(MASS)
@@ -176,10 +165,6 @@ sim_t_comp<-function(phylo,pars,root.values,Nsegments=1000,model="BM,OU,MC,DDexp
   ##define the number of smaller segments to divide a tree into
   N<-Nsegments
   seglength<-tail(nodeDist,n=1)/N
-  
-  if (seglength > min(phylo$edge.length)){
-    stop("increase Nsegments (smallest segment is larger than smallest branch length)")
-  } 
   
   #these create the objects where results are stored--so far, these store univarate data; would need to be updated to store multivariate data
   masterbranch.1<-list()

@@ -8,6 +8,7 @@
 ###If the model is OU, OU.theta is a vector defining the theta values, currently is fixed and cannot be varied.
 ###When using the DD model, define DD.root.rate and DD.tip.rate for the sig2 matrix at the root or tip and the R and slope term will be calculated for the DDexp and DDlin model respectively by using the equivalent sig2.matrices value as the rate at the root/tip not defined
 ###DD.tip.rate and DD.root.rate should be a list the length of sig2.matrices, with each value being a list containing matrices for each variation of sig2
+###Nsegments is the default number of segments when simulating traits using sim_t_comp_bivariate
 ###Nsim is the amount of times each variant will be simulated
 ###model is a string defining the model used and can be 'BM', 'OU', 'MC', 'DDexp' or 'DDlin'
 ###If return.values is TRUE, this function will return a 'masterlist' of each simulation result, the trees used and the parameters calculated.
@@ -22,6 +23,7 @@ mv_sim_multiple = function(
   OU.theta = NULL,
   DD.root.rate = NULL,
   DD.tip.rate = NULL,
+  Nsegments = 10000,
   Nsim = 100,
   model,
   return.values = FALSE,
@@ -110,16 +112,6 @@ mv_sim_multiple = function(
     }
   }
   
-  ##create function to define Nsim for sim_t_comp_bivariate
-  define_Nsim = function(tree,min_Nsim){
-    if (min(diff(sort(branching.times(tree)))) < 10/min_Nsim){  ## UPDATE FIND A WAY TO FIND TREE HEIGHT
-      Nsim = 10/min(diff(sort(branching.times(tree))))
-    } else {
-      Nsim = min_Nsim
-    }
-    return(Nsim)
-  }
-  
   ##if values are to be returned, make a masterlist
   if (return.values){
     masterlist = list()
@@ -153,9 +145,9 @@ mv_sim_multiple = function(
         for (k in 1:Nsim){
           sim_data = sim_t_comp(
             tree.list[[i]][[k]],
-            list(sig2.matrices[[k]]),
+            list(sig2.matrices[[j]]),
             root,
-            define_Nsim(tree.list[[i]][[k]],10000),
+            Nsegments,
             "BM"
           )
           temp.data[[k]] = sim_data
@@ -320,7 +312,7 @@ mv_sim_multiple = function(
                 tree.list[[i]][[m]],
                 sim.pars,
                 root,
-                define_Nsim(tree.list[[i]][[k]],10000),
+                Nsegments,
                 model
               )
               temp.data[[m]] = sim_data
@@ -440,7 +432,7 @@ mv_sim_multiple = function(
               tree.list[[i]][[k]],
               list(sig2.matrices[[j]],pars.list[[i]][[j]][[k]]),
               root,
-              define_Nsim(tree.list[[i]][[k]],10000),
+              Nsegments,
               "DDexp"
             )
             temp.data[[m]] = sim_data
