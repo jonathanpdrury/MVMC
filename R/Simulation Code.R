@@ -20,8 +20,8 @@ mv_sim_multiple = function(
   pars.format = NULL,
   half.lives = NULL,
   OU.theta = NULL,
-  DD.root.rate=NULL,
-  DD.tip.rate=NULL,
+  DD.root.rate = NULL,
+  DD.tip.rate = NULL,
   Nsim = 100,
   model,
   return.values = FALSE,
@@ -110,6 +110,16 @@ mv_sim_multiple = function(
     }
   }
   
+  ##create function to define Nsim for sim_t_comp_bivariate
+  define_Nsim = function(tree,min_Nsim){
+    if (min(diff(sort(branching.times(tree)))) < 10/min_Nsim){  ## UPDATE FIND A WAY TO FIND TREE HEIGHT
+      Nsim = 10/min(diff(sort(branching.times(tree))))
+    } else {
+      Nsim = min_Nsim
+    }
+    return(Nsim)
+  }
+  
   ##if values are to be returned, make a masterlist
   if (return.values){
     masterlist = list()
@@ -145,7 +155,7 @@ mv_sim_multiple = function(
             tree.list[[i]][[k]],
             list(sig2.matrices[[k]]),
             root,
-            10000,
+            define_Nsim(tree.list[[i]][[k]],10000),
             "BM"
           )
           temp.data[[k]] = sim_data
@@ -310,7 +320,7 @@ mv_sim_multiple = function(
                 tree.list[[i]][[m]],
                 sim.pars,
                 root,
-                10000,
+                define_Nsim(tree.list[[i]][[k]],10000),
                 model
               )
               temp.data[[m]] = sim_data
@@ -430,7 +440,7 @@ mv_sim_multiple = function(
               tree.list[[i]][[k]],
               list(sig2.matrices[[j]],pars.list[[i]][[j]][[k]]),
               root,
-              5000,
+              define_Nsim(tree.list[[i]][[k]],10000),
               "DDexp"
             )
             temp.data[[m]] = sim_data
