@@ -96,87 +96,43 @@ mv_sim_multiple = function(
     }
   }
   
-  ##if values are to be saved, checks for the existence of subfolders, and if not, creates them
-  if (!dir.exists('sim_results')){
-    dir.create('sim_results')
-  }
-  
-  if(model!="DDexp"&&model!="DDlin"){
-    if(
-      eval(
-        parse(
-          text=paste(
-            "!dir.exists('sim_results/",
-            model,
-            "')",
-            sep=""
-          )
-        )
-      )
-    ){
-      eval(
-        parse(
-          text=paste(
-            "dir.create('sim_results/",
-            model,
-            "')",
-            sep=""
-          )
-        )
-      )
-    }
-  } else { ##if DD models are used, when saving different directories are used for when tip rate and root rate are defined
-    if (!is.null(DD.tip.rate)){
-      if(
-        eval(
-          parse(
-            text=paste(
-              "!dir.exists('sim_results/",
-              model,
-              "_tip_defined')",
-              sep=""
-            )
-          )
-        )
-      ){
-        eval(
-          parse(
-            text=paste(
-              "dir.create('sim_results/",
-              model,
-              "_tip_defined')",
-              sep=""
-            )
-          )
+  ##if values are to be saved, checks for the existence of sim_values, if not creates it.
+  ##after this a folder is created within sim_values to store the results
+  if(save.values){
+    rand_string_create = function(n=1,length=12){
+      randomString = c(1:n) # initialize vector
+      for (i in 1:n){
+        randomString[i] = paste(
+          sample(
+            c(0:9,letters,LETTERS),
+            length,
+            replace=TRUE
+          ),
+          collapse=""
         )
       }
-    } else {
-      if(
-        eval(
-          parse(
-            text=paste(
-              "!dir.exists('sim_results/",
-              model,
-              "_root_defined')",
-              sep=""
-            )
-          )
-        )
-      ){
-        eval(
-          parse(
-            text=paste(
-              "dir.create('sim_results/",
-              model,
-              "_root_defined')",
-              sep=""
-            )
-          )
-        )
-      }
+      return(randomString)
     }
+    
+    if (!dir.exists('sim_results')){
+      dir.create('sim_results')
+    }
+    
+    ##create folder with a unique string at the end so there is no chance of overwriting
+    rand.string = rand_string_create()
+    eval(
+      parse(
+        text=paste(
+          "dir.create('sim_results/",
+          model,
+          "_",
+          rand.string,
+          "')",
+          sep=""
+        )
+      )
+    )
   }
-  
   
   ##if values are to be returned, make a masterlist
   if (return.values){
@@ -261,7 +217,9 @@ mv_sim_multiple = function(
                 j,
                 "_sim_num_",
                 sim_number,
-                ",file='sim_results/BM/BM_sim_tree_",
+                ",file='sim_results/BM_",
+                rand.string,
+                "/BM_sim_tree_",
                 names(tree.list[i]),
                 "_sig2_",
                 j,
@@ -452,6 +410,8 @@ mv_sim_multiple = function(
                     sim_number,
                     ",file='sim_results/",
                     model,
+                    "_",
+                    rand.string,
                     "/",
                     model,
                     "_sim_tree",
@@ -560,6 +520,8 @@ mv_sim_multiple = function(
                   sim_number,
                   ",file='sim_results/",
                   model,
+                  "_",
+                  rand.string,
                   "/",
                   model,
                   "_sim_tree",
@@ -599,6 +561,8 @@ mv_sim_multiple = function(
           text=paste(
             "save(sig2.matrices, file='sim_results/",
             model,
+            "_",
+            rand.string,
             "/",
             model,
             "_sig2_values.RData')",
@@ -608,10 +572,38 @@ mv_sim_multiple = function(
       )
       
       if (model=="OU"){
-        save(pars.list,file="sim_results/OU/OU_alpha_matrices.RData")
-        save(OU.theta,file="sim_results/OU/OU_theta_values.RData")
+        eval(
+          parse(
+            text=paste(
+              "save(pars.list,file='sim_results/OU_",
+              rand.string,
+              "OU_alpha_matrices.RData')",
+              sep = ""
+            )
+          )
+        )
+        
+        eval(
+          parse(
+            text=paste(
+              "save(OU.theta,file='sim_results/OU_",
+              rand.string,
+              "OU_theta_values.RData')",
+              sep = ""
+            )
+          )
+        )
       } else if (model=="MC"){
-        save(pars.list,file="sim_results/MC/MC_S_matrices.RData")
+        eval(
+          parse(
+            text=paste(
+              "save(pars.list,file='sim_results/MC_",
+              rand.string,
+              "MC_S_matrices.RData')",
+              sep = ""
+            )
+          )
+        )
       }
     } else {
       eval(
@@ -619,6 +611,8 @@ mv_sim_multiple = function(
           text=paste(
             "save(sig2.matrices, file='sim_results/",
             model,
+            "_",
+            rand.string,
             "/",
             model,
             "_root_sig2_values.RData')",
@@ -632,6 +626,8 @@ mv_sim_multiple = function(
           text=paste(
             "save(DD.tip.rate, file='sim_results/",
             model,
+            "_",
+            rand.string,
             "/",
             model,
             "_tip_sig2_values.RData')",
@@ -641,12 +637,46 @@ mv_sim_multiple = function(
       )
       
       if (model=="DDexp"){
-        save(pars.list,file="sim_results/DDexp/DDexp_r_term_matrices.RData")
+        eval(
+          parse(
+            text=paste(
+              "save(pars.list,file='sim_results/DDexp_",
+              rand.string,
+              "/DDexp_r_term_matrices.RData')",
+              sep = ""
+            )
+          )
+        )
       } else {
-        save(pars.list,file="sim_results/DDlin/DDlin_slope_term_matrices.RData")
+        eval(
+          parse(
+            text=paste(
+              "save(pars.list,file='sim_results/DDlin_",
+              rand.string,
+              "/DDexp_slope_term_matrices.RData')",
+              sep = ""
+            )
+          )
+        )
       }
     }
   }
+  
+  ##save tree.list
+  eval(
+    parse(
+      text=paste(
+        "save(tree.list, file='sim_results/",
+        model,
+        "_",
+        rand.string,
+        "/tree_list_",
+        sim.number,
+        ".RData')",
+        sep = ""
+      )
+    )
+  )
   
   if (return.values){
     print("simulation complete")
