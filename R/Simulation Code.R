@@ -6,14 +6,15 @@
 ###half lives is a vector for the half life of pars.1 in the alpha or S term if OU or MC respectively.
 ###pars.format is used to build the rest of the matrix, 'pars.2' is half of 'pars.1' and 'cov.pars' is 3/4 of 'pars.2', a minus sign can be added in front to make the parameter negative
 ###If the model is OU, OU.theta is a vector defining the theta values, currently is fixed and cannot be varied.
-###When using the DD model, define DD.root.rate and DD.tip.rate for the sig2 matrix at the root or tip and the R and slope term will be calculated for the DDexp and DDlin model respectively by using the equivalent sig2.matrices value as the rate at the root/tip not defined
-###DD.tip.rate and DD.root.rate should be a list the length of sig2.matrices, with each value being a list containing matrices for each variation of sig2
+###When using the DD model, define DD.tip.rate for the sig2 matrix at the root or tip and the R and slope term will be calculated for the DDexp and DDlin model
+###DD.tip.rate should be a list the length of sig2.matrices, with each value being a list containing matrices for each variation of sig2 at the tip
 ###Nsegments is the default number of segments when simulating traits using sim_t_comp_bivariate
 ###Nsim is the amount of times each variant will be simulated
 ###model is a string defining the model used and can be 'BM', 'OU', 'MC', 'DDexp' or 'DDlin'
 ###If return.values is TRUE, this function will return a 'masterlist' of each simulation result, the trees used and the parameters calculated.
 ###If save.values is TRUE, this function will save each simulation to the working directory as well as the calculated parameter values and trees used.
 ###Both return.values and save.values can be TRUE in the same run of the simulation
+###When parallelising this function, sim.number is used when saving the values so that the saves don't overlap
 mv_sim_multiple = function(
   tree.list,
   sig2.matrices,
@@ -21,13 +22,13 @@ mv_sim_multiple = function(
   pars.format = NULL,
   half.lives = NULL,
   OU.theta = NULL,
-  DD.root.rate = NULL,
   DD.tip.rate = NULL,
   Nsegments = 10000,
   Nsim = 100,
   model,
   return.values = FALSE,
-  save.values = FALSE
+  save.values = FALSE,
+  sim.number = 1
 ){
   require(phytools)
   require(matlib)
@@ -90,27 +91,92 @@ mv_sim_multiple = function(
           }
         }
       }
-    } else if (!is.null(DD.root.rate)){
-      if (!is.list(DD.root.rate)||length(DD.root.rate)!=length(sig2.matrices)){
-        stop("DD.root.rate must be a list the length of sig2.matrices")
-      }
-      for (i in 1:length(DD.root.rate)){
-        if (!is.list(DD.root.rate[[i]])){
-          stop("each item of DD.root.rate must be a list of matrices")
-        }
-        for (j in 1:length(DD.root.rate[[i]])){
-          if (class(DD.root.rate[[i]][[j]])!="matrix"){
-            stop("each item of DD.root.rate must be a list of matrices")
-          }
-        }
-      }
     } else {
-      stop("you must either give the variants of sig2 matrices at the roots (if the change is positive) or at the tips (if the change is negative)")
-    }
-    if (!is.null(DD.tip.rate)&&!is.null(DD.root.rate)){
-      stop("you must only give one of either DD.tip.rate or DD.root.rate.")
+      stop("you must either give the variants of sig2 matrices at the tips")
     }
   }
+  
+  ##if values are to be saved, checks for the existence of subfolders, and if not, creates them
+  if (!dir.exists('sim_results')){
+    dir.create('sim_results')
+  }
+  
+  if(model!="DDexp"&&model!="DDlin"){
+    if(
+      eval(
+        parse(
+          text=paste(
+            "!dir.exists('sim_results/",
+            model,
+            "')",
+            sep=""
+          )
+        )
+      )
+    ){
+      eval(
+        parse(
+          text=paste(
+            "dir.create('sim_results/",
+            model,
+            "')",
+            sep=""
+          )
+        )
+      )
+    }
+  } else { ##if DD models are used, when saving different directories are used for when tip rate and root rate are defined
+    if (!is.null(DD.tip.rate)){
+      if(
+        eval(
+          parse(
+            text=paste(
+              "!dir.exists('sim_results/",
+              model,
+              "_tip_defined')",
+              sep=""
+            )
+          )
+        )
+      ){
+        eval(
+          parse(
+            text=paste(
+              "dir.create('sim_results/",
+              model,
+              "_tip_defined')",
+              sep=""
+            )
+          )
+        )
+      }
+    } else {
+      if(
+        eval(
+          parse(
+            text=paste(
+              "!dir.exists('sim_results/",
+              model,
+              "_root_defined')",
+              sep=""
+            )
+          )
+        )
+      ){
+        eval(
+          parse(
+            text=paste(
+              "dir.create('sim_results/",
+              model,
+              "_root_defined')",
+              sep=""
+            )
+          )
+        )
+      }
+    }
+  }
+  
   
   ##if values are to be returned, make a masterlist
   if (return.values){
@@ -178,6 +244,8 @@ mv_sim_multiple = function(
                 names(tree.list[i]),
                 "_sig2_",
                 j,
+                "_sim_num_",
+                sim_number,
                 "',temp.data)",
                 sep = ""
               )
@@ -191,10 +259,14 @@ mv_sim_multiple = function(
                 names(tree.list[i]),
                 "_sig2_",
                 j,
-                ",file='BM_sim_tree_",
+                "_sim_num_",
+                sim_number,
+                ",file='sim_results/BM/BM_sim_tree_",
                 names(tree.list[i]),
                 "_sig2_",
                 j,
+                "_sim_num_",
+                sim_number,
                 ".RData')",
                 sep = ""
               )
@@ -241,12 +313,14 @@ mv_sim_multiple = function(
     
     names(pars.list) = half.lives
     
-    ##add calculated parameters to the masterlist
-    if (model == "OU"){
-      masterlist$parameters$alpha.parameters = pars.list
-      masterlist$parameters$theta = OU.theta
-    } else {
-      masterlist$parameters$S.matrices = pars.list
+    ##add calculated parameters to the masterlist if returning values
+    if (return.values){
+      if (model == "OU"){
+        masterlist$parameters$alpha.parameters = pars.list
+        masterlist$parameters$theta = OU.theta
+      } else {
+        masterlist$parameters$S.matrices = pars.list
+      }
     }
     
     ##simulate data using models
@@ -353,6 +427,8 @@ mv_sim_multiple = function(
                     half.lives[k],
                     "_pars_",
                     l,
+                    "_sim_num_",
+                    sim_number,
                     "',temp.data)",
                     sep = ""
                   )
@@ -372,7 +448,11 @@ mv_sim_multiple = function(
                     half.lives[k],
                     "_pars_",
                     l,
-                    ",file=',",
+                    "_sim_num_",
+                    sim_number,
+                    ",file='sim_results/",
+                    model,
+                    "/",
                     model,
                     "_sim_tree",
                     names(tree.list[i]),
@@ -382,6 +462,8 @@ mv_sim_multiple = function(
                     half.lives[k],
                     "_pars_",
                     l,
+                    "_sim_num_",
+                    sim_number,
                     ".RData')",
                     sep = ""
                   )
@@ -396,13 +478,6 @@ mv_sim_multiple = function(
     ##construct list to store parameters
     pars.list = list()
     
-    ##make DD.variable to store DD.tip.rate or DD.root.rate for nicer code when constructing r.term
-    if (!is.null(DD.tip.rate)){
-      DD.variable = DD.tip.rate
-    } else {
-      DD.variable = DD.root.rate
-    }
-    
     ##check if wanted and simulate DDexp model
     for (i in 1:length(tree.list)){
       pars.list[[i]] = list()
@@ -410,21 +485,13 @@ mv_sim_multiple = function(
       
       for (j in 1:length(sig2.matrices)){
         pars.list[[i]][[j]] = list()
-        for (k in 1:(length(DD.variable))){
+        for (k in 1:(length(DD.tip.rate))){
           temp.data = list()
           ##construct r.term/slope depending on the model used
           if (model=="DDexp"){
-            if (!is.null(DD.tip.rate)){
-              pars.list[[i]][[j]][[k]] = logm((inv(sig2.matrices[[j]])%*%DD.tip.rate[[j]][[k]]))/length(tree.list[[i]][[k]]$tip.label)
-            } else {
-              pars.list[[i]][[j]][[k]] = logm((inv(DD.root.rate[[j]][[k]])%*%sig2.matrices[[j]]))/length(tree.list[[i]][[k]]$tip.label)
-            }
+            pars.list[[i]][[j]][[k]] = logm((inv(sig2.matrices[[j]])%*%DD.tip.rate[[j]][[k]]))/length(tree.list[[i]][[k]]$tip.label)
           } else if (model=="DDlin"){
-            if (!is.null(DD.tip.rate)){
-              pars.list[[i]][[j]][[k]] = (DD.tip.rate[[j]][[k]]-sig2.matrices[[j]])/length(tree.list[[i]][[k]]$tip.label)
-            } else {
-              pars.list[[i]][[j]][[k]] = (sig2.matrices[[j]]-DD.root.rate[[j]][[k]])/length(tree.list[[i]][[k]]$tip.label)
-            }
+            pars.list[[i]][[j]][[k]] = (DD.tip.rate[[j]][[k]]-sig2.matrices[[j]])/length(tree.list[[i]][[k]]$tip.label)
           }
           
           for (m in 1:Nsim){
@@ -438,134 +505,76 @@ mv_sim_multiple = function(
             temp.data[[m]] = sim_data
           }
           
-          if (!is.null(DD.tip.rate)){
-            ##if values are to be returned, add to the masterlist simulations
-            if (return.values){
-              eval(
-                parse(
-                  text=paste(
-                    "masterlist$simulated.values$tree.",
-                    names(tree.list[i]),
-                    "$root.sig2.",
-                    j,
-                    "$tip.sig2.",
-                    k,
-                    " = temp.data",
-                    sep = ""
-                  )
+          ##if values are to be returned, add to the masterlist simulations
+          if (return.values){
+            eval(
+              parse(
+                text=paste(
+                  "masterlist$simulated.values$tree.",
+                  names(tree.list[i]),
+                  "$root.sig2.",
+                  j,
+                  "$tip.sig2.",
+                  k,
+                  " = temp.data",
+                  sep = ""
                 )
               )
-            }
+            )
+          }
+          
+          if (save.values){
+            ##rename data
+            eval(
+              parse(
+                text=paste(
+                  "assign('",
+                  model,
+                  "_sim_tree_",
+                  names(tree.list[i]),
+                  "_root_sig2_",
+                  j,
+                  "_tip_sig2_",
+                  k,
+                  "_sim_num_",
+                  sim_number,
+                  "',temp.data)",
+                  sep = ""
+                )
+              )
+            )
             
-            if (save.values){
-              ##rename data
-              eval(
-                parse(
-                  text=paste(
-                    "assign('",
-                    model,
-                    "_sim_tree_",
-                    names(tree.list[i]),
-                    "_root_sig2_",
-                    j,
-                    "_tip_sig2_",
-                    k,
-                    "',temp.data)",
-                    sep = ""
-                  )
+            ##save data
+            eval(
+              parse(
+                text=paste(
+                  "save(",
+                  model,
+                  "_sim_tree_",
+                  names(tree.list[i]),
+                  "_root_sig2_",
+                  j,
+                  "_tip_sig2_",
+                  k,
+                  "_sim_num_",
+                  sim_number,
+                  ",file='sim_results/",
+                  model,
+                  "/",
+                  model,
+                  "_sim_tree",
+                  names(tree.list[i]),
+                  "_root_sig2_",
+                  j,
+                  "_tip_sig2_",
+                  k,
+                  "_sim_num_",
+                  sim_number,
+                  ".RData')",
+                  sep = ""
                 )
               )
-              
-              ##save data
-              eval(
-                parse(
-                  text=paste(
-                    "save(",
-                    model,
-                    "_sim_tree_",
-                    names(tree.list[i]),
-                    "_root_sig2_",
-                    j,
-                    "_tip_sig2_",
-                    k,
-                    ",file='",
-                    model,
-                    "_sim_tree",
-                    names(tree.list[i]),
-                    "_root_sig2_",
-                    j,
-                    "_tip_sig2_",
-                    k,
-                    ".RData')",
-                    sep = ""
-                  )
-                )
-              )
-            }
-          } else {
-            ##if values are to be returned, add to the masterlist simulations
-            if (return.values){
-              eval(
-                parse(
-                  text=paste(
-                    "masterlist$simulated.values$tree.",
-                    names(tree.list[i]),
-                    "$tip.sig2.",
-                    j,
-                    "$root.sig2.",
-                    k,
-                    " = temp.data",
-                    sep = ""
-                  )
-                )
-              )
-            }
-            
-            if (save.values){
-              ##rename data
-              eval(
-                parse(
-                  text=paste(
-                    "assign('",
-                    model,
-                    "_sim_tree_",
-                    names(tree.list[i]),
-                    "_tip_sig2_",
-                    j,
-                    "_root_sig2_",
-                    k,
-                    "',temp.data)",
-                    sep = ""
-                  )
-                )
-              )
-              
-              ##save data
-              eval(
-                parse(
-                  text=paste(
-                    "save(",
-                    model,
-                    "_sim_tree_",
-                    names(tree.list[i]),
-                    "_tip_sig2_",
-                    j,
-                    "_root_sig2_",
-                    k,
-                    ",file='",
-                    model,
-                    "_sim_tree",
-                    names(tree.list[i]),
-                    "_tip_sig2_",
-                    j,
-                    "_root_sig2_",
-                    k,
-                    ".RData')",
-                    sep = ""
-                  )
-                )
-              )
-            }
+            )
           }
         }
       }
@@ -588,7 +597,9 @@ mv_sim_multiple = function(
       eval(
         parse(
           text=paste(
-            "save(sig2.matrices, file='",
+            "save(sig2.matrices, file='sim_results/",
+            model,
+            "/",
             model,
             "_sig2_values.RData')",
             sep = ""
@@ -597,44 +608,18 @@ mv_sim_multiple = function(
       )
       
       if (model=="OU"){
-        eval(
-          parse(
-            text=paste(
-              "save(pars.list,file='",
-              model,
-              "_alpha_matrices')",
-              sep = ""
-            )
-          )
-        )
-        
-        eval(
-          parse(
-            text=paste(
-              "save(OU.theta,file='",
-              model,
-              "_theta_values.RData')",
-              sep = ""
-            )
-          )
-        )
+        save(pars.list,file="sim_results/OU/OU_alpha_matrices.RData")
+        save(OU.theta,file="sim_results/OU/OU_theta_values.RData")
       } else if (model=="MC"){
-        eval(
-          parse(
-            text=paste(
-              "save(pars.list,file='",
-              model,
-              "_S_matrices.RData')",
-              sep = ""
-            )
-          )
-        )
+        save(pars.list,file="sim_results/MC/MC_S_matrices.RData")
       }
     } else {
       eval(
         parse(
           text=paste(
-            "save(sig2.matrices, file='",
+            "save(sig2.matrices, file='sim_results/",
+            model,
+            "/",
             model,
             "_root_sig2_values.RData')",
             sep = ""
@@ -645,36 +630,20 @@ mv_sim_multiple = function(
       eval(
         parse(
           text=paste(
-            "save(DD.tip.rate, file='",
+            "save(DD.tip.rate, file='sim_results/",
             model,
-            "_root_sig2_values.RData')",
+            "/",
+            model,
+            "_tip_sig2_values.RData')",
             sep = ""
           )
         )
       )
       
       if (model=="DDexp"){
-        eval(
-          parse(
-            text=paste(
-              "save(pars.list, file='",
-              model,
-              "_r_term_matrices.RData')",
-              sep = ""
-            )
-          )
-        )
+        save(pars.list,file="sim_results/DDexp/DDexp_r_term_matrices.RData")
       } else {
-        eval(
-          parse(
-            text=paste(
-              "save(pars.list, file='",
-              model,
-              "_slope_matrices.RData')",
-              sep = ""
-            )
-          )
-        )
+        save(pars.list,file="sim_results/DDlin/DDlin_slope_term_matrices.RData")
       }
     }
   }
