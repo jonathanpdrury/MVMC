@@ -12,9 +12,9 @@ sim_t_comp<-function(phylo,pars,root.values,Nsegments=1000,model="BM,OU,MC,DDexp
     if (length(pars)!=1||class(pars[[1]])!="matrix"){stop("Brownian Simuation parameters must only contain a sig2 matrix")}
   }
   if (model=="OU"){
-    if (length(pars)!=3){stop("OU simulation must use 3 parameters for sig2, theta and mu respectively")}
-    if (ncol(pars[[1]])!=ncol(pars[[2]])){stop("sig2 and theta must be matrices of equal size")}
-    if (length(pars[[3]])!=ncol(pars[[2]])){stop("mu must be a vector with a length equal to the amount of traits")}
+    if (length(pars)!=3){stop("OU simulation must use 3 parameters for sig2, alpha and theta respectively")}
+    if (ncol(pars[[1]])!=ncol(pars[[2]])){stop("sig2 and alpha must be matrices of equal size")}
+    if (length(pars[[3]])!=ncol(pars[[2]])){stop("theta must be a vector with a length equal to the amount of traits")}
   }
   if (model=="MC"){
     if (length(pars)!=2){stop("MC simulation must use 2 parameters for sig2 and S respectively")}
@@ -130,23 +130,39 @@ sim_t_comp<-function(phylo,pars,root.values,Nsegments=1000,model="BM,OU,MC,DDexp
   ##define simulator for each time step of the model
   if (model=="BM"){
     simvalueBM = function(sig2.matrix, start.value.vector, seglen) {
-      x = start.value.vector + t(t(mvrnorm(n=2 ,mu=0, Sigma=1))%*%chol(sig2.matrix*seglen))
+      #x = start.value.vector + t(t(mvrnorm(n=2 ,mu=0, Sigma=1))%*%chol(sig2.matrix*seglen))
+      x = start.value.vector + t(t(mvrnorm(n=2 ,mu=0, Sigma=1))%*%chol(sig2.matrix))*sqrt(seglen)
+
     }
   }
+  
+  #check this (theta vs. alpha)
   if (model=="OU"){
-    simvalueOU = function(sig2.matrix, theta.matrix, mu.vector, start.value.vector, seglen) {
-      x = start.value.vector + theta.matrix%*%(mu.vector-start.value.vector)*seglen + t(t(mvrnorm(n=2 ,mu=0, Sigma=1))%*%chol(sig2.matrix*seglen))
+    simvalueOU = function(sig2.matrix, alpha.matrix, theta.vector, start.value.vector, seglen) {
+      #x = start.value.vector + alpha.matrix%*%(theta.vector-start.value.vector)*seglen + t(t(mvrnorm(n=2 ,mu=0, Sigma=1))%*%chol(sig2.matrix*seglen))
+      x = start.value.vector + alpha.matrix%*%(theta.vector-start.value.vector)*seglen + t(t(mvrnorm(n=2 ,mu=0, Sigma=1))%*%chol(sig2.matrix))*sqrt(seglen)
     }
   }
   if (model=="MC"){
     simvalueMC = function(sig2.matrix, s.term.matrix, mu.vector, start.value.vector, seglen) {
-      x = start.value.vector + s.term.matrix%*%(mu.vector-start.value.vector)*seglen + t(t(mvrnorm(n=2 ,mu=0, Sigma=1))%*%chol(sig2.matrix*seglen))
+      #x = start.value.vector + s.term.matrix%*%(mu.vector-start.value.vector)*seglen + t(t(mvrnorm(n=2 ,mu=0, Sigma=1))%*%chol(sig2.matrix*seglen))
+      x = start.value.vector + s.term.matrix%*%(mu.vector-start.value.vector)*seglen + t(t(mvrnorm(n=2 ,mu=0, Sigma=1))%*%chol(sig2.matrix))*sqrt(seglen)
     }
   }
   if (model=="DDexp"){
     simvalueDDexp = function(sig2.matrix, r.term.matrix, branch.number, start.value.vector, seglen) {
-      adj.sig2.matrix = sig2.matrix %*% expm(r.term.matrix*branch.number)
-      x = start.value.vector + t(t(mvrnorm(n=2 ,mu=0, Sigma=1))%*%chol(adj.sig2.matrix*seglen))
+   #1   adj.sig2.matrix = sig2.matrix %*% expm(r.term.matrix*branch.number) #issue with multiplying variances
+   #2   adj.sig2.matrix = sqrt(sig2.matrix) %*% expm(r.term.matrix*branch.number)      
+ X##3   adj.sig2.matrix = sig2.matrix * exp(r.term.matrix*branch.number)
+      
+      
+      #x = start.value.vector + t(t(mvrnorm(n=2 ,mu=0, Sigma=1))%*%chol(adj.sig2.matrix*seglen))
+      
+   #4 x = start.value.vector + t(t(mvrnorm(n=2 ,mu=0, Sigma=1))%*%chol(sig2.matrix%*%(expm(r.term.matrix*branch.number)^2)*seglen))
+  X##5 x = start.value.vector + t(t(mvrnorm(n=2 ,mu=0, Sigma=1))%*%chol((exp(r.term.matrix*branch.number)^2)*sig2.matrix*seglen))
+   #6 x = start.value.vector + t(t(mvrnorm(n=2 ,mu=0, Sigma=1))%*%chol(sig2.matrix*(expm(r.term.matrix*branch.number)^2)*seglen))
+   #7 this is the one:
+   		x = start.value.vector + t(expm(r.term.matrix*branch.number)%*%t(chol(sig2.matrix))%*%(mvrnorm(n=2 ,mu=0, Sigma=1)))*sqrt(seglen)
     }
   }
   if (model=="DDlin"){
@@ -155,8 +171,11 @@ sim_t_comp<-function(phylo,pars,root.values,Nsegments=1000,model="BM,OU,MC,DDexp
       stop("Error simulating DDlin; choose slope so that sig2!<=0 at present")
     } else {
       simvalueDDlin = function(sig2.matrix, slope, branch.number, start.value.vector, seglen) {
-        adj.sig2.matrix = sig2.matrix + (slope*branch.number)
-        x = start.value.vector + t(t(mvrnorm(n=2, mu=0, Sigma=1))%*%chol(adj.sig2.matrix*seglen))
+        #adj.sig2.matrix = sig2.matrix + (slope*branch.number)
+        #x = start.value.vector + t(t(mvrnorm(n=2, mu=0, Sigma=1))%*%chol(adj.sig2.matrix*seglen))
+        
+   		#x = start.value.vector + t((r.term.matrix*branch.number)+t(chol(sig2.matrix*seglen))%*%(mvrnorm(n=2 ,mu=0, Sigma=1)))
+   		x = start.value.vector + t((r.term.matrix*branch.number)+t(chol(sig2.matrix))%*%(mvrnorm(n=2 ,mu=0, Sigma=1)))*sqrt(seglen)
       }
     }
   }
@@ -225,7 +244,7 @@ sim_t_comp<-function(phylo,pars,root.values,Nsegments=1000,model="BM,OU,MC,DDexp
           sv<-simvalueBM(sig2,start.value,segsize)
         }
         if(model=="OU"){
-          sv<-simvalueOU(sig2,theta.matrix,mu.vector,start.value,segsize)
+          sv<-simvalueOU(sig2,alpha.matrix,theta.vector,start.value,segsize)
         }
         if(model=="MC"){
           sv<-simvalueMC(sig2,s.term.matrix,mu.value,start.value,segsize)
@@ -239,7 +258,7 @@ sim_t_comp<-function(phylo,pars,root.values,Nsegments=1000,model="BM,OU,MC,DDexp
         masterbranch.1[[i]][[j]]<-c(masterbranch.1[[i]][[j]],sv[1])
         masterbranch.2[[i]][[j]]<-c(masterbranch.2[[i]][[j]],sv[2])
       }
-      ##THINK about whether the placement of mu was wrong in original simulations
+
       mu1=c(mu1,mean(sapply(masterbranch.1[[i]],tail,n=1)))# the last element in each element of branchlist/branches present ##this assumes that the first element is updated for each i
       mu2=c(mu2,mean(sapply(masterbranch.2[[i]],tail,n=1)))# the last element in each element of branchlist/branches present ##this assumes that the first element is updated for each i
     }

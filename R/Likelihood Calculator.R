@@ -27,16 +27,18 @@ log_likelihood_multivariate_BM = function(tree,sig2,root,sim){
     }
   }
   
-  D = matrix(ncol=length(root),nrow=(length(root)*length(tree$tip.label)))
-  for (k in 1:nrow(D)){
-    for (l in 1:ncol(D)){
-      if ((l-1)*length(tree$tip.label) < k && k <= l * length(tree$tip.label)){
-        D[k,l] = 1
-      } else {
-        D[k,l] = 0
-      }
-    }
-  }
+#  D = matrix(ncol=length(root),nrow=(length(root)*length(tree$tip.label)))
+#  for (k in 1:nrow(D)){
+#    for (l in 1:ncol(D)){
+#      if ((l-1)*length(tree$tip.label) < k && k <= l * length(tree$tip.label)){
+#        D[k,l] = 1
+#      } else {
+#        D[k,l] = 0
+#      }
+#    }
+#  }
+  
+  D=kronecker(diag(2),matrix(1,ncol=1,nrow=length(tree$tip.label)))
   
   vcv.tree = vcv(tree)
   vcv.sig2.product = kronecker(sig2,vcv.tree)
