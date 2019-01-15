@@ -151,27 +151,9 @@ sim_t_comp<-function(phylo,pars,root.values,Nsegments=1000,model="BM,OU,MC,DDexp
   }
   if (model=="DDexp"){
     simvalueDDexp = function(sig2.matrix, r.term.matrix, branch.number, start.value.vector, seglen) {
-   #1   adj.sig2.matrix = sig2.matrix %*% expm(r.term.matrix*branch.number) #issue with multiplying variances
-   #2   adj.sig2.matrix = sqrt(sig2.matrix) %*% expm(r.term.matrix*branch.number)      
- X##3   adj.sig2.matrix = sig2.matrix * exp(r.term.matrix*branch.number)
-      
-      
-      #x = start.value.vector + t(t(mvrnorm(n=2 ,mu=0, Sigma=1))%*%chol(adj.sig2.matrix*seglen))
-      
-   #4 x = start.value.vector + t(t(mvrnorm(n=2 ,mu=0, Sigma=1))%*%chol(sig2.matrix%*%(expm(r.term.matrix*branch.number)^2)*seglen))
-  X##5 x = start.value.vector + t(t(mvrnorm(n=2 ,mu=0, Sigma=1))%*%chol((exp(r.term.matrix*branch.number)^2)*sig2.matrix*seglen))
-   #6 x = start.value.vector + t(t(mvrnorm(n=2 ,mu=0, Sigma=1))%*%chol(sig2.matrix*(expm(r.term.matrix*branch.number)^2)*seglen))
-   #7 this is the one:
-   #		x = start.value.vector + t(expm(r.term.matrix*branch.number)%*%t(chol(sig2.matrix))%*%(mvrnorm(n=2 ,mu=0, Sigma=1)))*sqrt(seglen)
-   #After Dec 17 email and "Bivariate SDE.docx" from Julien Clavel, should be
-   		x = start.value.vector + t(exp(r.term.matrix*branch.number)*t(chol(sig2.matrix))%*%(mvrnorm(n=2 ,mu=0, Sigma=1)))*sqrt(seglen)
-   	
-   	#or should it be the following, which gives the same output as #3 above
-   	
-   	#	x = start.value.vector + t(t(chol(sig2.matrix*exp(r.term.matrix*branch.number)))%*%(mvrnorm(n=2 ,mu=0, Sigma=1)))*sqrt(seglen)
+   #After 17 Dec 2018 & 14 Jan 2019 emails and "Bivariate SDE.docx" from Julien Clavel, should be
+   		x = start.value.vector + t(exp(r.term.matrix*branch.number)*t(chol(sig2.matrix))%*%(mvrnorm(n=2 ,mu=0, Sigma=1)))*sqrt(seglen)   	
 
-	#or maybe:
-   	#	x = start.value.vector + t(chol(exp(r.term.matrix*branch.number))*t(chol(sig2.matrix))%*%(mvrnorm(n=2 ,mu=0, Sigma=1)))*sqrt(seglen)
     }
   }
   if (model=="DDlin"){
@@ -180,10 +162,6 @@ sim_t_comp<-function(phylo,pars,root.values,Nsegments=1000,model="BM,OU,MC,DDexp
       stop("Error simulating DDlin; choose slope so that sig2!<=0 at present")
     } else {
       simvalueDDlin = function(sig2.matrix, slope, branch.number, start.value.vector, seglen) {
-        #adj.sig2.matrix = sig2.matrix + (slope*branch.number)
-        #x = start.value.vector + t(t(mvrnorm(n=2, mu=0, Sigma=1))%*%chol(adj.sig2.matrix*seglen))
-        
-   		#x = start.value.vector + t((r.term.matrix*branch.number)+t(chol(sig2.matrix*seglen))%*%(mvrnorm(n=2 ,mu=0, Sigma=1)))
    		x = start.value.vector + t((r.term.matrix*branch.number)+t(chol(sig2.matrix))%*%(mvrnorm(n=2 ,mu=0, Sigma=1)))*sqrt(seglen)
       }
     }
