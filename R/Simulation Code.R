@@ -14,7 +14,6 @@
 ###If return.values is TRUE, this function will return a 'masterlist' of each simulation result, the trees used and the parameters calculated.
 ###If save.values is TRUE, this function will save each simulation to the working directory as well as the calculated parameter values and trees used.
 ###Both return.values and save.values can be TRUE in the same run of the simulation
-###When parallelising this function, sim.number is used when saving the values so that the saves don't overlap
 mv_sim_multiple = function(
   tree.list,
   sig2.matrices,
@@ -24,24 +23,17 @@ mv_sim_multiple = function(
   OU.theta = NULL,
   DD.tip.rate = NULL,
   Nsegments = 10000,
-  Nsim = 100,
+  Nsim = c(1:100),
   model,
   return.values = FALSE,
   save.values = FALSE,
-  sim.number = 1
+  folder.paint = NULL
 ){
   require(phytools)
-  require(matlib)
-  require(expm)
   ##check parameters are inputted correctly
   
   if (!return.values && !save.values){
     stop("You must select whether the values are saved or returned to the console.")
-  }
-  for (i in 1:length(tree.list)){
-    if (length(tree.list[[i]])!=Nsim){
-      stop("tree.list must be mulitple lists of length Nsim")
-    }
   }
   if (!is.list(sig2.matrices)){
     stop("sig2.matrices must be a list of only matrices")
@@ -67,7 +59,7 @@ mv_sim_multiple = function(
       stop("pars.format must be a list of only matrices")
     }
     for (i in 1:length(pars.format)){
-      if (class(sig2.matrices[[i]])!="matrix"){
+      if (class(pars.format[[i]])!="matrix"){
         stop("pars.format must be a list of only matrices")
       }
     }
@@ -99,27 +91,29 @@ mv_sim_multiple = function(
   ##if values are to be saved, checks for the existence of sim_values, if not creates it.
   ##after this a folder is created within sim_values to store the results
   if(save.values){
-    rand_string_create = function(n=1,length=12){
-      randomString = c(1:n) # initialize vector
-      for (i in 1:n){
-        randomString[i] = paste(
-          sample(
-            c(0:9,letters,LETTERS),
-            length,
-            replace=TRUE
-          ),
-          collapse=""
-        )
-      }
-      return(randomString)
-    }
-    
     if (!dir.exists('sim_results')){
       dir.create('sim_results')
     }
     
-    ##create folder with a unique string at the end so there is no chance of overwriting
-    rand.string = rand_string_create()
+    ##create folder with a unique string at the end so there is no chance of overwriting, if folder.paint is defined use this
+    if(is.null(folder.paint)){
+      rand_string_create = function(n=1,length=12){
+        randomString = c(1:n) # initialize vector
+        for (i in 1:n){
+          randomString[i] = paste(
+            sample(
+              c(0:9,letters,LETTERS),
+              length,
+              replace=TRUE
+            ),
+            collapse=""
+          )
+        }
+        return(randomString)
+      }
+      rand.string = rand_string_create()
+    }
+    
     eval(
       parse(
         text=paste(
@@ -164,7 +158,7 @@ mv_sim_multiple = function(
         temp.data = list()
         
         ##simulate data
-        for (k in 1:Nsim){
+        for (k in Nsim){
           sim_data = sim_t_comp(
             tree.list[[i]][[k]],
             list(sig2.matrices[[j]]),
@@ -200,8 +194,6 @@ mv_sim_multiple = function(
                 names(tree.list[i]),
                 "_sig2_",
                 j,
-                "_sim_num_",
-                sim_number,
                 "',temp.data)",
                 sep = ""
               )
@@ -215,16 +207,12 @@ mv_sim_multiple = function(
                 names(tree.list[i]),
                 "_sig2_",
                 j,
-                "_sim_num_",
-                sim_number,
                 ",file='sim_results/BM_",
                 rand.string,
                 "/BM_sim_tree_",
                 names(tree.list[i]),
                 "_sig2_",
                 j,
-                "_sim_num_",
-                sim_number,
                 ".RData')",
                 sep = ""
               )
@@ -339,7 +327,7 @@ mv_sim_multiple = function(
               sim.pars = list(sig2.matrices[[j]],pars.list[[k]][[l]])
             }
             
-            for (m in 1:Nsim){
+            for (m in Nsim){
               sim_data = sim_t_comp(
                 tree.list[[i]][[m]],
                 sim.pars,
@@ -385,8 +373,6 @@ mv_sim_multiple = function(
                     half.lives[k],
                     "_pars_",
                     l,
-                    "_sim_num_",
-                    sim_number,
                     "',temp.data)",
                     sep = ""
                   )
@@ -406,8 +392,6 @@ mv_sim_multiple = function(
                     half.lives[k],
                     "_pars_",
                     l,
-                    "_sim_num_",
-                    sim_number,
                     ",file='sim_results/",
                     model,
                     "_",
@@ -422,8 +406,6 @@ mv_sim_multiple = function(
                     half.lives[k],
                     "_pars_",
                     l,
-                    "_sim_num_",
-                    sim_number,
                     ".RData')",
                     sep = ""
                   )
@@ -449,12 +431,19 @@ mv_sim_multiple = function(
           temp.data = list()
           ##construct r.term/slope depending on the model used
           if (model=="DDexp"){
-            pars.list[[i]][[j]][[k]] = logm((inv(sig2.matrices[[j]])%*%DD.tip.rate[[j]][[k]]))/length(tree.list[[i]][[k]]$tip.label)
+            pars.list[[i]][[j]][[k]] = matrix(nrow=nrow(DD.tip.rate[[j]][[k]]),ncol=ncol(DD.tip.rate[[j]][[k]]))
+            for (l in 1:length(DD.tip.rate[[j]][[k]])){
+              if (sig2.matrices[[j]][[l]]==0){
+                pars.list[[i]][[j]][[k]][l] = 0
+              } else {
+                pars.list[[i]][[j]][[k]][l] = log(DD.tip.rate[[j]][[k]][[l]]/sig2.matrices[[j]][[l]])/length(tree.list[[i]][[k]]$tip.label)
+              }
+            }
           } else if (model=="DDlin"){
             pars.list[[i]][[j]][[k]] = (DD.tip.rate[[j]][[k]]-sig2.matrices[[j]])/length(tree.list[[i]][[k]]$tip.label)
           }
           
-          for (m in 1:Nsim){
+          for (m in Nsim){
             sim_data = sim_t_comp(
               tree.list[[i]][[k]],
               list(sig2.matrices[[j]],pars.list[[i]][[j]][[k]]),
@@ -496,8 +485,6 @@ mv_sim_multiple = function(
                   j,
                   "_tip_sig2_",
                   k,
-                  "_sim_num_",
-                  sim_number,
                   "',temp.data)",
                   sep = ""
                 )
@@ -516,8 +503,6 @@ mv_sim_multiple = function(
                   j,
                   "_tip_sig2_",
                   k,
-                  "_sim_num_",
-                  sim_number,
                   ",file='sim_results/",
                   model,
                   "_",
@@ -530,8 +515,6 @@ mv_sim_multiple = function(
                   j,
                   "_tip_sig2_",
                   k,
-                  "_sim_num_",
-                  sim_number,
                   ".RData')",
                   sep = ""
                 )
@@ -577,7 +560,7 @@ mv_sim_multiple = function(
             text=paste(
               "save(pars.list,file='sim_results/OU_",
               rand.string,
-              "OU_alpha_matrices.RData')",
+              "/OU_alpha_matrices.RData')",
               sep = ""
             )
           )
@@ -588,7 +571,7 @@ mv_sim_multiple = function(
             text=paste(
               "save(OU.theta,file='sim_results/OU_",
               rand.string,
-              "OU_theta_values.RData')",
+              "/OU_theta_values.RData')",
               sep = ""
             )
           )
@@ -599,7 +582,7 @@ mv_sim_multiple = function(
             text=paste(
               "save(pars.list,file='sim_results/MC_",
               rand.string,
-              "MC_S_matrices.RData')",
+              "/MC_S_matrices.RData')",
               sep = ""
             )
           )
@@ -670,9 +653,7 @@ mv_sim_multiple = function(
         model,
         "_",
         rand.string,
-        "/tree_list_",
-        sim.number,
-        ".RData')",
+        "/tree_list.RData')",
         sep = ""
       )
     )

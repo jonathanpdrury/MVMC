@@ -1,13 +1,17 @@
 library(phytools)
-Nsim = 100
+Nsim = 1:100
 root = c(0,0)
 tree.sizes = c(20,50,100,150)
 tree.list = list()
 for (i in 1:length(tree.sizes)){
   tree.list[[i]] = list()
-  for (j in 1:Nsim){
+  for (j in Nsim){
     tree = pbtree(n=tree.sizes[i])
     tree$edge.length = 10/max(nodeHeights(tree))*tree$edge.length
+    while(min(diff(sort(branching.times(tree)))) >= 10/1000000){##length of the tree/Nsim in sim_t_comp_bivariate
+      tree = NULL
+      tree = (pbtree(n=tree.sizes[i]))
+    }
     tree.list[[i]][[j]] = tree
   }
 }
@@ -21,13 +25,13 @@ sig2.matrices = list(matrix1,matrix2,matrix3)
 DDpos.matrix1 = matrix(c(0.01,0,0,0.005),ncol=2)
 DDpos.matrix2 = matrix(c(0.01,0.005,0.005,0.005),ncol=2)
 DDpos.matrix3 = matrix(c(0.01,-0.005,-0.005,0.005),ncol=2)
-DDpos.sig2.matrices = list(DDpos.matrix1,DDpos.matrix2,DDpos.matrix3)
+DDpos.sig2.matrices = list(DDPos.matrix1,DDpos.matrix2,DDpos.matrix3)
 
-pars1 = matrix(c("pars.1",0,0,"pars.2"))
-pars2 = matrix(c("pars.1","cov.pars","cov.pars","pars.2"))
-pars3 = matrix(c("pars.1","-cov.pars","-cov.pars","pars.2"))
-pars4 = matrix(c("pars.1","cov.pars",0,"pars.2"))
-pars.list = list(pars1,pars2,pars3,pars4)
+pars1 = matrix(c("pars.1",0,0,"pars.2"),ncol=2)
+pars2 = matrix(c("pars.1","cov.pars","cov.pars","pars.2"),ncol=2)
+pars3 = matrix(c("pars.1","-cov.pars","-cov.pars","pars.2"),ncol=2)
+pars4 = matrix(c("pars.1","cov.pars",0,"pars.2"),ncol=2)
+pars.format = list(pars1,pars2,pars3,pars4)
 half.lives = c(0,0.5,1,5)
 OU.theta = c(1,2)
 

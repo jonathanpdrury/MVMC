@@ -1,7 +1,6 @@
 sim_t_comp<-function(phylo,pars,root.values,Nsegments=1000,model="BM,OU,MC,DDexp,DDlin"){
   require(phytools)
   require(MASS)
-  require(expm)
   
   #return error if non-ultrametric tree
   if(phylo$Nnode!=(length(phylo$tip.label)-1)){stop("phylo object must be ultrametric")}
@@ -32,8 +31,8 @@ sim_t_comp<-function(phylo,pars,root.values,Nsegments=1000,model="BM,OU,MC,DDexp
   ##store parameters provided by user depending on model provided
   sig2=pars[[1]]
   if (model=="OU"){
-    theta.matrix = pars[[2]]
-    mu.vector = pars[[3]]
+    alpha.matrix = pars[[2]]
+    theta.vector = pars[[3]]
   }
   if (model=="MC"){
     s.term.matrix = pars[[2]]
@@ -152,7 +151,7 @@ sim_t_comp<-function(phylo,pars,root.values,Nsegments=1000,model="BM,OU,MC,DDexp
   if (model=="DDexp"){
     simvalueDDexp = function(sig2.matrix, r.term.matrix, branch.number, start.value.vector, seglen) {
    #After 17 Dec 2018 & 14 Jan 2019 emails and "Bivariate SDE.docx" from Julien Clavel, should be
-   		x = start.value.vector + t(exp(r.term.matrix*branch.number)*t(chol(sig2.matrix))%*%(mvrnorm(n=2 ,mu=0, Sigma=1)))*sqrt(seglen)   	
+   		x = start.value.vector + t((exp(r.term.matrix*branch.number)*t(chol(sig2.matrix)))%*%(mvrnorm(n=2 ,mu=0, Sigma=1)))*sqrt(seglen)   	
 
     }
   }
