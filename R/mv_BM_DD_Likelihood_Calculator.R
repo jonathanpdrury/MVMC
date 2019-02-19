@@ -49,10 +49,10 @@ log_likelihood_mv_BM_DD = function(
       dd.ob = createModel_DDlin(tree)
     }
     
-    block1 = getTipDistribution(dd.ob,params=c(0,log(sig2.matrix[1,1]),slope.matrix[1,1]))$Sigma
-    block2 = getTipDistribution(dd.ob,params=c(0,log(sig2.matrix[1,2]),slope.matrix[1,2]))$Sigma
-    block3 = getTipDistribution(dd.ob,params=c(0,log(sig2.matrix[2,1]),slope.matrix[2,1]))$Sigma
-    block4 = getTipDistribution(dd.ob,params=c(0,log(sig2.matrix[2,2]),slope.matrix[2,2]))$Sigma
+    block1 = getTipDistribution(dd.ob,params=c(0,log(sqrt(sig2.matrix[1,1])),slope.matrix[1,1]))$Sigma
+    block2 = getTipDistribution(dd.ob,params=c(0,log(sqrt(sig2.matrix[1,2])),slope.matrix[1,2]))$Sigma
+    block3 = getTipDistribution(dd.ob,params=c(0,log(sqrt(sig2.matrix[2,1])),slope.matrix[2,1]))$Sigma
+    block4 = getTipDistribution(dd.ob,params=c(0,log(sqrt(sig2.matrix[2,2])),slope.matrix[2,2]))$Sigma
     
     #compile blocks
     vcv.sig2.product = rbind(cbind(block1,block2),cbind(block3,block4))
