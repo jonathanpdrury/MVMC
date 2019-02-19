@@ -1,23 +1,66 @@
 .libPaths("/ddn/data/ckkr89/R/x86_64-pc-linux-gnu-library/3.4")
 setwd('/ddn/home/ckkr89/Project Data/complete_sim_results/Likelihood Test')
+#setwd('//Hudson/ckkr89/My_Documents/Project/Simulation Study/Final Simulation/complete_sim_results/Likelihood Test')
 source('PhenotypicModel.R') #from RPANDA (Marc Manceau)
 source('PhenotypicADiag.R') #from RPANDA (Marc Manceau)
 source('DDexp_nogeo_ADiag.R') #from RPANDA 
 source('DDlin_nogeo_ADiag.R') #from RPANDA
 source('mv_BM_DD_Likelihood_Calculator.R')
+require(phytools)
+require(mvMORPH)
+require(MASS)
+require(msos)
+require(parallel)
+require(snow)
 
-max_likelihood_calculator_BM_OU_DD = function(
-  model
+
+parallel_max_likelihood_calculator_BM_OU_DD = function(
+  model,
+  Nsim
 ){
   require(phytools)
   require(mvMORPH)
-  require(MASS)
+  require(matlib)
   require(msos)
+  require(parallel)
+  require(snow)
   
   if (model == "BM"){
     setwd('/ddn/home/ckkr89/Project Data/complete_sim_results/complete_BM')
+    #setwd('//Hudson/ckkr89/My_Documents/Project/Simulation Study/Final Simulation/complete_sim_results/complete_BM')
     load('BM_sig2_values.RData')
     load('tree_list.RData')
+    
+    if (!dir.exists('likelihood_results')){
+      dir.create('likelihood_results')
+    }
+    
+    rand_string_create = function(n=1,length=12){
+      randomString = c(1:n) # initialize vector
+      for (i in 1:n){
+        randomString[i] = paste(
+          sample(
+            c(0:9,letters,LETTERS),
+            length,
+            replace=TRUE
+          ),
+          collapse=""
+        )
+      }
+      return(randomString)
+    }
+    rand.string = rand_string_create()
+    
+    eval(
+      parse(
+        text=paste(
+          "dir.create('likelihood_results/BM_likelihood_",
+          rand.string,
+          "')",
+          sep=""
+        )
+      )
+    )
     
     tree.size = c()
     tree.number = c()
@@ -54,7 +97,7 @@ max_likelihood_calculator_BM_OU_DD = function(
         )
         sim.results = get(x)
         
-        for (k in 1:length(sim.results)){
+        for (k in Nsim){
           sim.results.matrix = matrix(nrow=length(tree.list[[i]][[k]]$tip.label),ncol=2)
           
           for (l in 1:length(tree.list[[i]][[k]]$tip.label)){
@@ -111,15 +154,57 @@ max_likelihood_calculator_BM_OU_DD = function(
       convergence
     )
     
+    eval(
+      parse(
+        text=paste(
+          "setwd('likelihood_results/BM_likelihood_",
+          rand.string,
+          "')",
+          sep=""
+        )
+      )
+    )
     write.csv(BM_data, file = "BM_Data.csv")
     
   } else if (model == "OU"){
     
     setwd('/ddn/home/ckkr89/Project Data/complete_sim_results/complete_OU')
+    #setwd('//Hudson/ckkr89/My_Documents/Project/Simulation Study/Final Simulation/complete_sim_results/complete_OU')
     load('OU_sig2_values.RData')
     load('OU_alpha_matrices.RData')
     load('OU_theta_values.RData')
     load('tree_list.RData')
+    
+    if (!dir.exists('likelihood_results')){
+      dir.create('likelihood_results')
+    }
+    
+    rand_string_create = function(n=1,length=12){
+      randomString = c(1:n) # initialize vector
+      for (i in 1:n){
+        randomString[i] = paste(
+          sample(
+            c(0:9,letters,LETTERS),
+            length,
+            replace=TRUE
+          ),
+          collapse=""
+        )
+      }
+      return(randomString)
+    }
+    rand.string = rand_string_create()
+    
+    eval(
+      parse(
+        text=paste(
+          "dir.create('likelihood_results/OU_likelihood_",
+          rand.string,
+          "')",
+          sep=""
+        )
+      )
+    )
     
     tree.size = c()
     tree.number = c()
@@ -168,7 +253,7 @@ max_likelihood_calculator_BM_OU_DD = function(
             )
             sim.results = get(x)
             
-            for (m in 1:length(sim.results)){
+            for (m in Nsim){
               sim.results.matrix = matrix(nrow=length(tree.list[[i]][[m]]$tip.label),ncol=2)
               
               for (n in 1:length(tree.list[[i]][[m]]$tip.label)){
@@ -242,15 +327,57 @@ max_likelihood_calculator_BM_OU_DD = function(
       convergence
     )
     
+    eval(
+      parse(
+        text=paste(
+          "setwd('likelihood_results/OU_likelihood_",
+          rand.string,
+          "')",
+          sep=""
+        )
+      )
+    )
     write.csv(OU_data, file = "OU_data.csv")
     
   } else if (model == "MC"){
     ##TBD
   } else if (model == "DDexp_neg"){
     setwd('/ddn/home/ckkr89/Project Data/complete_sim_results/complete_DDexp_neg')
+    #setwd('//Hudson/ckkr89/My_Documents/Project/Simulation Study/Final Simulation/complete_sim_results/complete_DDexp_neg')
     load('DDexp_root_sig2_values.RData')
     load('DDexp_r_term_matrices.RData')
     load('tree_list.RData')
+    
+    if (!dir.exists('likelihood_results')){
+      dir.create('likelihood_results')
+    }
+    
+    rand_string_create = function(n=1,length=12){
+      randomString = c(1:n) # initialize vector
+      for (i in 1:n){
+        randomString[i] = paste(
+          sample(
+            c(0:9,letters,LETTERS),
+            length,
+            replace=TRUE
+          ),
+          collapse=""
+        )
+      }
+      return(randomString)
+    }
+    rand.string = rand_string_create()
+    
+    eval(
+      parse(
+        text=paste(
+          "dir.create('likelihood_results/DDexp_neg_likelihood_",
+          rand.string,
+          "')",
+          sep=""
+        )
+      )
+    )
     
     tree.size = c()
     tree.number = c()
@@ -296,7 +423,7 @@ max_likelihood_calculator_BM_OU_DD = function(
           )
           sim.results = get(x)
           
-          for (l in 1:length(sim.results)){
+          for (l in Nsim){
             result = optim(
               par = c(0.5,0,0,1,1,0.5,-0.1,-0.05,-0.05,-0.1),
               fn = log_likelihood_mv_BM_DD,
@@ -362,13 +489,55 @@ max_likelihood_calculator_BM_OU_DD = function(
       convergence
     )
     
+    eval(
+      parse(
+        text=paste(
+          "setwd('likelihood_results/DDexp_neg_likelihood_",
+          rand.string,
+          "')",
+          sep=""
+        )
+      )
+    )
     write.csv(DDexp_neg_data, file = "DDexp_neg_data.csv")
     
   } else if (model == "DDexp_pos"){
     setwd('/ddn/home/ckkr89/Project Data/complete_sim_results/complete_DDexp_pos')
+    #setwd('//Hudson/ckkr89/My_Documents/Project/Simulation Study/Final Simulation/complete_sim_results/complete_DDexp_pos')
     load('DDexp_root_sig2_values.RData')
     load('DDexp_r_term_matrices.RData')
     load('tree_list.RData')
+    
+    if (!dir.exists('likelihood_results')){
+      dir.create('likelihood_results')
+    }
+    
+    rand_string_create = function(n=1,length=12){
+      randomString = c(1:n) # initialize vector
+      for (i in 1:n){
+        randomString[i] = paste(
+          sample(
+            c(0:9,letters,LETTERS),
+            length,
+            replace=TRUE
+          ),
+          collapse=""
+        )
+      }
+      return(randomString)
+    }
+    rand.string = rand_string_create()
+    
+    eval(
+      parse(
+        text=paste(
+          "dir.create('likelihood_results/DDexp_pos_likelihood_",
+          rand.string,
+          "')",
+          sep=""
+        )
+      )
+    )
     
     tree.size = c()
     tree.number = c()
@@ -414,7 +583,7 @@ max_likelihood_calculator_BM_OU_DD = function(
           )
           sim.results = get(x)
           
-          for (l in 1:length(sim.results)){
+          for (l in Nsim){
             result = optim(
               par = c(0.5,0,0,1,1,0.5,-0.1,-0.05,-0.05,-0.1),
               fn = log_likelihood_mv_BM_DD,
@@ -480,13 +649,55 @@ max_likelihood_calculator_BM_OU_DD = function(
       convergence
     )
     
+    eval(
+      parse(
+        text=paste(
+          "setwd('likelihood_results/DDexp_pos_likelihood_",
+          rand.string,
+          "')",
+          sep=""
+        )
+      )
+    )
     write.csv(DDexp_pos_data, file = "DDexp_pos_data.csv")
     
   } else if (model == "DDlin_neg"){
     setwd('/ddn/home/ckkr89/Project Data/complete_sim_results/complete_DDlin_neg')
+    #setwd('//Hudson/ckkr89/My_Documents/Project/Simulation Study/Final Simulation/complete_sim_results/complete_DDlin_neg')
     load('DDlin_root_sig2_values.RData')
     load('DDlin_slope_term_matrices.RData')
     load('tree_list.RData')
+    
+    if (!dir.exists('likelihood_results')){
+      dir.create('likelihood_results')
+    }
+    
+    rand_string_create = function(n=1,length=12){
+      randomString = c(1:n) # initialize vector
+      for (i in 1:n){
+        randomString[i] = paste(
+          sample(
+            c(0:9,letters,LETTERS),
+            length,
+            replace=TRUE
+          ),
+          collapse=""
+        )
+      }
+      return(randomString)
+    }
+    rand.string = rand_string_create()
+    
+    eval(
+      parse(
+        text=paste(
+          "dir.create('likelihood_results/DDlin_neg_likelihood_",
+          rand.string,
+          "')",
+          sep=""
+        )
+      )
+    )
     
     tree.size = c()
     tree.number = c()
@@ -513,7 +724,7 @@ max_likelihood_calculator_BM_OU_DD = function(
     log.likelihood = c()
     convergence = c()
     
-    for (i in 1:length(tree.list)){
+    for (i in Nsim){
       for (j in 1:length(sig2.matrices)){
         for (k in 1:length(pars.list[[i]][[j]])){
           x = eval(
@@ -601,13 +812,55 @@ max_likelihood_calculator_BM_OU_DD = function(
       convergence
     )
     
-    write.csv(DDlin_neg_data, file = "DDpos_neg_data.csv")
+    eval(
+      parse(
+        text=paste(
+          "setwd('likelihood_results/DDlin_neg_likelihood_",
+          rand.string,
+          "')",
+          sep=""
+        )
+      )
+    )
+    write.csv(DDlin_neg_data, file = "DDlin_neg_data.csv")
     
   } else if (model == "DDlin_pos"){
     setwd('/ddn/home/ckkr89/Project Data/complete_sim_results/complete_DDlin_pos')
+    #setwd('//Hudson/ckkr89/My_Documents/Project/Simulation Study/Final Simulation/complete_sim_results/complete_DDlin_pos')
     load('DDlin_root_sig2_values.RData')
     load('DDlin_slope_term_matrices.RData')
     load('tree_list.RData')
+    
+    if (!dir.exists('likelihood_results')){
+      dir.create('likelihood_results')
+    }
+    
+    rand_string_create = function(n=1,length=12){
+      randomString = c(1:n) # initialize vector
+      for (i in 1:n){
+        randomString[i] = paste(
+          sample(
+            c(0:9,letters,LETTERS),
+            length,
+            replace=TRUE
+          ),
+          collapse=""
+        )
+      }
+      return(randomString)
+    }
+    rand.string = rand_string_create()
+    
+    eval(
+      parse(
+        text=paste(
+          "dir.create('likelihood_results/DDlin_pos_likelihood_",
+          rand.string,
+          "')",
+          sep=""
+        )
+      )
+    )
     
     tree.size = c()
     tree.number = c()
@@ -653,7 +906,7 @@ max_likelihood_calculator_BM_OU_DD = function(
           )
           sim.results = get(x)
           
-          for (l in 1:length(sim.results)){
+          for (l in Nsim){
             result = optim(
               par = c(0.5,0,0,1,1,0.5,-0.1,-0.05,-0.05,-0.1),
               fn = log_likelihood_mv_BM_DD,
@@ -722,6 +975,16 @@ max_likelihood_calculator_BM_OU_DD = function(
       convergence
     )
     
+    eval(
+      parse(
+        text=paste(
+          "setwd('likelihood_results/DDlin_pos_likelihood_",
+          rand.string,
+          "')",
+          sep=""
+        )
+      )
+    )
     write.csv(DDlin_pos_data, file = "DDlin_pos_data.csv")
     
   } else {
@@ -729,8 +992,44 @@ max_likelihood_calculator_BM_OU_DD = function(
   }
 }
 
-max_likelihood_calculator_BM_OU_DD("OU")
+#max_likelihood_calculator_BM_OU_DD("OU")
 
+no.cores = detectCores()
+cl = makeCluster(no.cores, type=getClusterOption("type"),outfile='')
+ex <- Filter(function(x) is.function(get(x, .GlobalEnv)), ls(.GlobalEnv))
+clusterExport(cl, ls())
+clusterEvalQ(cl,eval(parse(file = 'PhenotypicModel.R', n = 1)))
+clusterEvalQ(cl,eval(parse(file = 'PhenotypicADiag.R', n = 1)))
+
+clusterApply(
+  cl,
+  1:100,
+  parallel_max_likelihood_calculator_BM_OU_DD,
+  model = "DDexp_neg"
+)
+
+clusterApply(
+  cl,
+  1:100,
+  parallel_max_likelihood_calculator_BM_OU_DD,
+  model = "DDexp_pos"
+)
+
+clusterApply(
+  cl,
+  1:100,
+  parallel_max_likelihood_calculator_BM_OU_DD,
+  model = "DDlin_neg"
+)
+
+clusterApply(
+  cl,
+  1:100,
+  parallel_max_likelihood_calculator_BM_OU_DD,
+  model = "DDlin_pos"
+)
+
+stopCluster(cl)
 
 
 
