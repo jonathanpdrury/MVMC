@@ -54,6 +54,9 @@ log_likelihood_mv_BM_DD = function(
     block3 = getTipDistribution(dd.ob,params=c(0,log(sqrt(sig2.matrix[2,1])),slope.matrix[2,1]))$Sigma
     block4 = getTipDistribution(dd.ob,params=c(0,log(sqrt(sig2.matrix[2,2])),slope.matrix[2,2]))$Sigma
     
+    block2 = sign(sign.parameter)*block2
+    block3 = sign(sign.parameter)*block3
+    
     #compile blocks
     vcv.sig2.product = rbind(cbind(block1,block2),cbind(block3,block4))
   }
