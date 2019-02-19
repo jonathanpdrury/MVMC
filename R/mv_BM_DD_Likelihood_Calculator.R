@@ -18,6 +18,7 @@ log_likelihood_mv_BM_DD = function(
   require(MASS)
   require(msos)
   
+  
   if (optim){
     sig2.matrix = matrix(par[1:4],ncol=2)
     root = par[5:6]
@@ -29,7 +30,10 @@ log_likelihood_mv_BM_DD = function(
   if (!model %in% c("BM","DDexp","DDlin")){
     stop("model must be BM, DDexp or DDlin")
   }
-  
+
+  sign.sig12 = sign(sig2.matrix[1,2])
+  av.sig12 = abs(sig2.matrix[1,2])
+
   sim_values = c()
   sorted.sim = sim.value[tree$tip.label]
   for (i in 1:length(root)){
@@ -50,12 +54,12 @@ log_likelihood_mv_BM_DD = function(
     }
     
     block1 = getTipDistribution(dd.ob,params=c(0,log(sqrt(sig2.matrix[1,1])),slope.matrix[1,1]))$Sigma
-    block2 = getTipDistribution(dd.ob,params=c(0,log(sqrt(sig2.matrix[1,2])),slope.matrix[1,2]))$Sigma
-    block3 = getTipDistribution(dd.ob,params=c(0,log(sqrt(sig2.matrix[2,1])),slope.matrix[2,1]))$Sigma
+    block2 = getTipDistribution(dd.ob,params=c(0,log(sqrt(av.sig12)),slope.matrix[1,2]))$Sigma
+    block3 = getTipDistribution(dd.ob,params=c(0,log(sqrt(av.sig12)),slope.matrix[2,1]))$Sigma
     block4 = getTipDistribution(dd.ob,params=c(0,log(sqrt(sig2.matrix[2,2])),slope.matrix[2,2]))$Sigma
     
-    block2 = sign(sign.parameter)*block2
-    block3 = sign(sign.parameter)*block3
+    block2 = sign.sig12*block2
+    block3 = sign.sig12*block3
     
     #compile blocks
     vcv.sig2.product = rbind(cbind(block1,block2),cbind(block3,block4))
