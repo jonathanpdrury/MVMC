@@ -31,9 +31,6 @@ log_likelihood_mv_BM_DD = function(
     stop("model must be BM, DDexp or DDlin")
   }
 
-  sign.sig12 = sign(sig2.matrix[1,2])
-  av.sig12 = abs(sig2.matrix[1,2])
-
   sim_values = c()
   sorted.sim = sim.value[tree$tip.label]
   for (i in 1:length(root)){
@@ -52,6 +49,9 @@ log_likelihood_mv_BM_DD = function(
     } else if (model=="DDlin") {
       dd.ob = createModel_DDlin(tree)
     }
+    
+    sign.sig12 = sign(sig2.matrix[1,2])
+    av.sig12 = abs(sig2.matrix[1,2])
     
     block1 = getTipDistribution(dd.ob,params=c(0,log(sqrt(sig2.matrix[1,1])),slope.matrix[1,1]))$Sigma
     block2 = getTipDistribution(dd.ob,params=c(0,log(sqrt(av.sig12)),slope.matrix[1,2]))$Sigma

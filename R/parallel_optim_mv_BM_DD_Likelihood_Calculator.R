@@ -20,7 +20,7 @@ parallel_max_likelihood_calculator_BM_OU_DD = function(
 ){
   require(phytools)
   require(mvMORPH)
-  require(matlib)
+  require(MASS)
   require(msos)
   require(parallel)
   require(snow)
@@ -31,8 +31,8 @@ parallel_max_likelihood_calculator_BM_OU_DD = function(
     load('BM_sig2_values.RData')
     load('tree_list.RData')
     
-    if (!dir.exists('likelihood_results')){
-      dir.create('likelihood_results')
+    if (!dir.exists('/ddn/data/ckkr89/likelihood_results')){
+      dir.create('/ddn/data/ckkr89/likelihood_results')
     }
     
     rand_string_create = function(n=1,length=12){
@@ -54,7 +54,7 @@ parallel_max_likelihood_calculator_BM_OU_DD = function(
     eval(
       parse(
         text=paste(
-          "dir.create('likelihood_results/BM_likelihood_",
+          "dir.create('/ddn/data/ckkr89/likelihood_results/BM_likelihood_",
           rand.string,
           "')",
           sep=""
@@ -157,14 +157,13 @@ parallel_max_likelihood_calculator_BM_OU_DD = function(
     eval(
       parse(
         text=paste(
-          "setwd('likelihood_results/BM_likelihood_",
+          "write.csv(BM_data, file = '/ddn/data/ckkr89/likelihood_results/BM_likelihood_",
           rand.string,
-          "')",
-          sep=""
+          "/BM_data.csv')",
+          sep = ""
         )
       )
     )
-    write.csv(BM_data, file = "BM_Data.csv")
     
   } else if (model == "OU"){
     
@@ -175,8 +174,8 @@ parallel_max_likelihood_calculator_BM_OU_DD = function(
     load('OU_theta_values.RData')
     load('tree_list.RData')
     
-    if (!dir.exists('likelihood_results')){
-      dir.create('likelihood_results')
+    if (!dir.exists('/ddn/data/ckkr89/likelihood_results')){
+      dir.create('/ddn/data/ckkr89/likelihood_results')
     }
     
     rand_string_create = function(n=1,length=12){
@@ -198,7 +197,7 @@ parallel_max_likelihood_calculator_BM_OU_DD = function(
     eval(
       parse(
         text=paste(
-          "dir.create('likelihood_results/OU_likelihood_",
+          "dir.create('/ddn/data/ckkr89/likelihood_results/OU_likelihood_",
           rand.string,
           "')",
           sep=""
@@ -270,30 +269,64 @@ parallel_max_likelihood_calculator_BM_OU_DD = function(
                 model = "OU1"
               )
               
-              tree.size = c(tree.size,names(tree.list[i]))
-              tree.number = c(tree.number,k)
-              sig2.1 = c(sig2.1,sig2.matrices[[j]][1])
-              sig2.2 = c(sig2.2,sig2.matrices[[j]][2])
-              sig2.3 = c(sig2.3,sig2.matrices[[j]][3])
-              sig2.4 = c(sig2.4,sig2.matrices[[j]][4])
-              theta.1 = c(theta.1,OU.theta)
-              theta.2 = c(theta.2,OU.theta)
-              alpha.1 = c(alpha.1,pars.list[[k]][[l]][1])
-              alpha.2 = c(alpha.2,pars.list[[k]][[l]][2])
-              alpha.3 = c(alpha.3,pars.list[[k]][[l]][3])
-              alpha.4 = c(alpha.4,pars.list[[k]][[l]][4])
-              est.sig2.1 = c(est.sig2.1,result[[6]][1])
-              est.sig2.2 = c(est.sig2.2,result[[6]][2])
-              est.sig2.3 = c(est.sig2.3,result[[6]][3])
-              est.sig2.4 = c(est.sig2.4,result[[6]][4])
-              est.theta.1 = c(est.theta.1,result[[4]][1])
-              est.theta.2 = c(est.theta.2,result[[4]][2])
-              est.alpha.1 = c(est.alpha.1,result[[5]][1])
-              est.alpha.2 = c(est.alpha.1,result[[5]][2])
-              est.alpha.3 = c(est.alpha.1,result[[5]][3])
-              est.alpha.4 = c(est.alpha.1,result[[5]][4])
-              log.likelihood = c(log.likelihood,result[[1]])
-              convergence = c(convergence,result[[7]])
+              test = try(
+                mvOU(
+                  tree = tree.list[[i]][[m]],
+                  data = sim.results.matrix[tree.list[[i]][[k]]$tip.label,],
+                  model = "OU1"
+                )
+              )
+              if (class(test) == "try-error"){
+                tree.size = c(tree.size,names(tree.list[i]))
+                tree.number = c(tree.number,k)
+                sig2.1 = c(sig2.1,sig2.matrices[[j]][1])
+                sig2.2 = c(sig2.2,sig2.matrices[[j]][2])
+                sig2.3 = c(sig2.3,sig2.matrices[[j]][3])
+                sig2.4 = c(sig2.4,sig2.matrices[[j]][4])
+                theta.1 = c(theta.1,OU.theta[1])
+                theta.2 = c(theta.2,OU.theta[2])
+                alpha.1 = c(alpha.1,pars.list[[k]][[l]][1])
+                alpha.2 = c(alpha.2,pars.list[[k]][[l]][2])
+                alpha.3 = c(alpha.3,pars.list[[k]][[l]][3])
+                alpha.4 = c(alpha.4,pars.list[[k]][[l]][4])
+                est.sig2.1 = c(est.sig2.1,"error")
+                est.sig2.2 = c(est.sig2.2,"error")
+                est.sig2.3 = c(est.sig2.3,"error")
+                est.sig2.4 = c(est.sig2.4,"error")
+                est.theta.1 = c(est.theta.1,"error")
+                est.theta.2 = c(est.theta.2,"error")
+                est.alpha.1 = c(est.alpha.1,"error")
+                est.alpha.2 = c(est.alpha.2,"error")
+                est.alpha.3 = c(est.alpha.3,"error")
+                est.alpha.4 = c(est.alpha.4,"error")
+                log.likelihood = c(log.likelihood,"error")
+                convergence = c(convergence,"error")
+              } else {
+                tree.size = c(tree.size,names(tree.list[i]))
+                tree.number = c(tree.number,k)
+                sig2.1 = c(sig2.1,sig2.matrices[[j]][1])
+                sig2.2 = c(sig2.2,sig2.matrices[[j]][2])
+                sig2.3 = c(sig2.3,sig2.matrices[[j]][3])
+                sig2.4 = c(sig2.4,sig2.matrices[[j]][4])
+                theta.1 = c(theta.1,OU.theta[1])
+                theta.2 = c(theta.2,OU.theta[2])
+                alpha.1 = c(alpha.1,pars.list[[k]][[l]][1])
+                alpha.2 = c(alpha.2,pars.list[[k]][[l]][2])
+                alpha.3 = c(alpha.3,pars.list[[k]][[l]][3])
+                alpha.4 = c(alpha.4,pars.list[[k]][[l]][4])
+                est.sig2.1 = c(est.sig2.1,result[[6]][1])
+                est.sig2.2 = c(est.sig2.2,result[[6]][2])
+                est.sig2.3 = c(est.sig2.3,result[[6]][3])
+                est.sig2.4 = c(est.sig2.4,result[[6]][4])
+                est.theta.1 = c(est.theta.1,result[[4]][1])
+                est.theta.2 = c(est.theta.2,result[[4]][2])
+                est.alpha.1 = c(est.alpha.1,result[[5]][1])
+                est.alpha.2 = c(est.alpha.2,result[[5]][2])
+                est.alpha.3 = c(est.alpha.3,result[[5]][3])
+                est.alpha.4 = c(est.alpha.4,result[[5]][4])
+                log.likelihood = c(log.likelihood,result[[1]])
+                convergence = c(convergence,result[[7]])
+              }
             }
           }
         }
@@ -330,14 +363,13 @@ parallel_max_likelihood_calculator_BM_OU_DD = function(
     eval(
       parse(
         text=paste(
-          "setwd('likelihood_results/OU_likelihood_",
+          "write.csv(OU_data, file = '/ddn/data/ckkr89/likelihood_results/OU_likelihood_",
           rand.string,
-          "')",
-          sep=""
+          "/OU_data.csv')",
+          sep = ""
         )
       )
     )
-    write.csv(OU_data, file = "OU_data.csv")
     
   } else if (model == "MC"){
     ##TBD
@@ -348,8 +380,8 @@ parallel_max_likelihood_calculator_BM_OU_DD = function(
     load('DDexp_r_term_matrices.RData')
     load('tree_list.RData')
     
-    if (!dir.exists('likelihood_results')){
-      dir.create('likelihood_results')
+    if (!dir.exists('/ddn/data/ckkr89/likelihood_results')){
+      dir.create('/ddn/data/ckkr89/likelihood_results')
     }
     
     rand_string_create = function(n=1,length=12){
@@ -371,7 +403,7 @@ parallel_max_likelihood_calculator_BM_OU_DD = function(
     eval(
       parse(
         text=paste(
-          "dir.create('likelihood_results/DDexp_neg_likelihood_",
+          "dir.create('/ddn/data/ckkr89/likelihood_results/DDexp_neg_likelihood_",
           rand.string,
           "')",
           sep=""
@@ -492,14 +524,13 @@ parallel_max_likelihood_calculator_BM_OU_DD = function(
     eval(
       parse(
         text=paste(
-          "setwd('likelihood_results/DDexp_neg_likelihood_",
+          "write.csv(DDexp_neg_data, file = '/ddn/data/ckkr89/likelihood_results/DDexp_neg_likelihood_",
           rand.string,
-          "')",
-          sep=""
+          "/DDexp_neg_data.csv')",
+          sep = ""
         )
       )
     )
-    write.csv(DDexp_neg_data, file = "DDexp_neg_data.csv")
     
   } else if (model == "DDexp_pos"){
     setwd('/ddn/home/ckkr89/Project Data/complete_sim_results/complete_DDexp_pos')
@@ -508,8 +539,8 @@ parallel_max_likelihood_calculator_BM_OU_DD = function(
     load('DDexp_r_term_matrices.RData')
     load('tree_list.RData')
     
-    if (!dir.exists('likelihood_results')){
-      dir.create('likelihood_results')
+    if (!dir.exists('/ddn/data/ckkr89/likelihood_results')){
+      dir.create('/ddn/data/ckkr89/likelihood_results')
     }
     
     rand_string_create = function(n=1,length=12){
@@ -531,7 +562,7 @@ parallel_max_likelihood_calculator_BM_OU_DD = function(
     eval(
       parse(
         text=paste(
-          "dir.create('likelihood_results/DDexp_pos_likelihood_",
+          "dir.create('/ddn/data/ckkr89/likelihood_results/DDexp_pos_likelihood_",
           rand.string,
           "')",
           sep=""
@@ -595,10 +626,10 @@ parallel_max_likelihood_calculator_BM_OU_DD = function(
             
             tree.size = c(tree.size,names(tree.list[i]))
             tree.number = c(tree.number,k)
-            sig2.1 = c(sig2.1,DDpos.sig2.matrices[[j]][1])
-            sig2.2 = c(sig2.2,DDpos.sig2.matrices[[j]][2])
-            sig2.3 = c(sig2.3,DDpos.sig2.matrices[[j]][3])
-            sig2.4 = c(sig2.4,DDpos.sig2.matrices[[j]][4])
+            sig2.1 = c(sig2.1,sig2.matrices[[j]][1])
+            sig2.2 = c(sig2.2,sig2.matrices[[j]][2])
+            sig2.3 = c(sig2.3,sig2.matrices[[j]][3])
+            sig2.4 = c(sig2.4,sig2.matrices[[j]][4])
             root.1 = c(root.1,0)
             root.2 = c(root.2,0)
             r.term.1 = c(r.term.1,pars.list[[i]][[j]][[k]][1])
@@ -652,14 +683,13 @@ parallel_max_likelihood_calculator_BM_OU_DD = function(
     eval(
       parse(
         text=paste(
-          "setwd('likelihood_results/DDexp_pos_likelihood_",
+          "write.csv(DDexp_pos_data, file = '/ddn/data/ckkr89/likelihood_results/DDexp_pos_likelihood_",
           rand.string,
-          "')",
-          sep=""
+          "/DDexp_pos_data.csv')",
+          sep = ""
         )
       )
     )
-    write.csv(DDexp_pos_data, file = "DDexp_pos_data.csv")
     
   } else if (model == "DDlin_neg"){
     setwd('/ddn/home/ckkr89/Project Data/complete_sim_results/complete_DDlin_neg')
@@ -668,8 +698,8 @@ parallel_max_likelihood_calculator_BM_OU_DD = function(
     load('DDlin_slope_term_matrices.RData')
     load('tree_list.RData')
     
-    if (!dir.exists('likelihood_results')){
-      dir.create('likelihood_results')
+    if (!dir.exists('/ddn/data/ckkr89/likelihood_results')){
+      dir.create('/ddn/data/ckkr89/likelihood_results')
     }
     
     rand_string_create = function(n=1,length=12){
@@ -691,7 +721,7 @@ parallel_max_likelihood_calculator_BM_OU_DD = function(
     eval(
       parse(
         text=paste(
-          "dir.create('likelihood_results/DDlin_neg_likelihood_",
+          "dir.create('/ddn/data/ckkr89/likelihood_results/DDlin_neg_likelihood_",
           rand.string,
           "')",
           sep=""
@@ -724,7 +754,7 @@ parallel_max_likelihood_calculator_BM_OU_DD = function(
     log.likelihood = c()
     convergence = c()
     
-    for (i in Nsim){
+    for (i in 1:length(tree.list)){
       for (j in 1:length(sig2.matrices)){
         for (k in 1:length(pars.list[[i]][[j]])){
           x = eval(
@@ -743,7 +773,7 @@ parallel_max_likelihood_calculator_BM_OU_DD = function(
           )
           sim.results = get(x)
           
-          for (l in 1:length(sim.results)){
+          for (l in Nsim){
             result = optim(
               par = c(0.5,0,0,1,1,0.5,-0.1,-0.05,-0.05,-0.1),
               fn = log_likelihood_mv_BM_DD,
@@ -753,9 +783,6 @@ parallel_max_likelihood_calculator_BM_OU_DD = function(
               optim = TRUE
             )
             
-            #calculate the position of the values in the data frame
-            data.frame.position = (i-1)*(j-1)*(k-1)*l + (j-1)*(k-1)*l + (k-1)*l + l
-            
             tree.size = c(tree.size,names(tree.list[i]))
             tree.number = c(tree.number,k)
             sig2.1 = c(sig2.1,sig2.matrices[[j]][1])
@@ -764,20 +791,20 @@ parallel_max_likelihood_calculator_BM_OU_DD = function(
             sig2.4 = c(sig2.4,sig2.matrices[[j]][4])
             root.1 = c(root.1,0)
             root.2 = c(root.2,0)
-            r.term.1 = c(r.term.1,pars.list[[i]][[j]][[k]][1])
-            r.term.2 = c(r.term.2,pars.list[[i]][[j]][[k]][2])
-            r.term.3 = c(r.term.3,pars.list[[i]][[j]][[k]][3])
-            r.term.4 = c(r.term.4,pars.list[[i]][[j]][[k]][4])
+            slope.term.1 = c(slope.term.1,pars.list[[i]][[j]][[k]][1])
+            slope.term.2 = c(slope.term.2,pars.list[[i]][[j]][[k]][2])
+            slope.term.3 = c(slope.term.3,pars.list[[i]][[j]][[k]][3])
+            slope.term.4 = c(slope.term.4,pars.list[[i]][[j]][[k]][4])
             est.sig2.1 = c(est.sig2.1,result[[1]][1])
             est.sig2.2 = c(est.sig2.2,result[[1]][2])
             est.sig2.3 = c(est.sig2.3,result[[1]][3])
             est.sig2.4 = c(est.sig2.4,result[[1]][4])
             est.root.1 = c(est.root.1,result[[1]][5])
             est.root.2 = c(est.root.2,result[[1]][6])
-            est.r.term.1 = c(est.r.term.1,result[[1]][7])
-            est.r.term.2 = c(est.r.term.2,result[[1]][8])
-            est.r.term.3 = c(est.r.term.3,result[[1]][9])
-            est.r.term.4 = c(est.r.term.4,result[[1]][10])
+            est.slope.term.1 = c(est.slope.term.1,result[[1]][7])
+            est.slope.term.2 = c(est.slope.term.2,result[[1]][8])
+            est.slope.term.3 = c(est.slope.term.3,result[[1]][9])
+            est.slope.term.4 = c(est.slope.term.4,result[[1]][10])
             log.likelihood = c(log.likelihood,result[[2]])
             convergence = c(convergence,result[[4]])
           }
@@ -815,14 +842,13 @@ parallel_max_likelihood_calculator_BM_OU_DD = function(
     eval(
       parse(
         text=paste(
-          "setwd('likelihood_results/DDlin_neg_likelihood_",
+          "write.csv(DDlin_neg_data, file = '/ddn/data/ckkr89/likelihood_results/DDlin_neg_likelihood_",
           rand.string,
-          "')",
-          sep=""
+          "/DDlin_neg_data.csv')",
+          sep = ""
         )
       )
     )
-    write.csv(DDlin_neg_data, file = "DDlin_neg_data.csv")
     
   } else if (model == "DDlin_pos"){
     setwd('/ddn/home/ckkr89/Project Data/complete_sim_results/complete_DDlin_pos')
@@ -831,8 +857,8 @@ parallel_max_likelihood_calculator_BM_OU_DD = function(
     load('DDlin_slope_term_matrices.RData')
     load('tree_list.RData')
     
-    if (!dir.exists('likelihood_results')){
-      dir.create('likelihood_results')
+    if (!dir.exists('/ddn/data/ckkr89/likelihood_results')){
+      dir.create('/ddn/data/ckkr89/likelihood_results')
     }
     
     rand_string_create = function(n=1,length=12){
@@ -854,7 +880,7 @@ parallel_max_likelihood_calculator_BM_OU_DD = function(
     eval(
       parse(
         text=paste(
-          "dir.create('likelihood_results/DDlin_pos_likelihood_",
+          "dir.create('/ddn/data/ckkr89/likelihood_results/DDlin_pos_likelihood_",
           rand.string,
           "')",
           sep=""
@@ -921,26 +947,26 @@ parallel_max_likelihood_calculator_BM_OU_DD = function(
             
             tree.size = c(tree.size,names(tree.list[i]))
             tree.number = c(tree.number,k)
-            sig2.1 = c(sig2.1,DDpos.sig2.matrices[[j]][1])
-            sig2.2 = c(sig2.2,DDpos.sig2.matrices[[j]][2])
-            sig2.3 = c(sig2.3,DDpos.sig2.matrices[[j]][3])
-            sig2.4 = c(sig2.4,DDpos.sig2.matrices[[j]][4])
+            sig2.1 = c(sig2.1,sig2.matrices[[j]][1])
+            sig2.2 = c(sig2.2,sig2.matrices[[j]][2])
+            sig2.3 = c(sig2.3,sig2.matrices[[j]][3])
+            sig2.4 = c(sig2.4,sig2.matrices[[j]][4])
             root.1 = c(root.1,0)
             root.2 = c(root.2,0)
-            r.term.1 = c(r.term.1,pars.list[[i]][[j]][[k]][1])
-            r.term.2 = c(r.term.2,pars.list[[i]][[j]][[k]][2])
-            r.term.3 = c(r.term.3,pars.list[[i]][[j]][[k]][3])
-            r.term.4 = c(r.term.4,pars.list[[i]][[j]][[k]][4])
+            slope.term.1 = c(slope.term.1,pars.list[[i]][[j]][[k]][1])
+            slope.term.2 = c(slope.term.2,pars.list[[i]][[j]][[k]][2])
+            slope.term.3 = c(slope.term.3,pars.list[[i]][[j]][[k]][3])
+            slope.term.4 = c(slope.term.4,pars.list[[i]][[j]][[k]][4])
             est.sig2.1 = c(est.sig2.1,result[[1]][1])
             est.sig2.2 = c(est.sig2.2,result[[1]][2])
             est.sig2.3 = c(est.sig2.3,result[[1]][3])
             est.sig2.4 = c(est.sig2.4,result[[1]][4])
             est.root.1 = c(est.root.1,result[[1]][5])
             est.root.2 = c(est.root.2,result[[1]][6])
-            est.r.term.1 = c(est.r.term.1,result[[1]][7])
-            est.r.term.2 = c(est.r.term.2,result[[1]][8])
-            est.r.term.3 = c(est.r.term.3,result[[1]][9])
-            est.r.term.4 = c(est.r.term.4,result[[1]][10])
+            est.slope.term.1 = c(est.slope.term.1,result[[1]][7])
+            est.slope.term.2 = c(est.slope.term.2,result[[1]][8])
+            est.slope.term.3 = c(est.slope.term.3,result[[1]][9])
+            est.slope.term.4 = c(est.slope.term.4,result[[1]][10])
             log.likelihood = c(log.likelihood,result[[2]])
             convergence = c(convergence,result[[4]])
           }
@@ -978,14 +1004,13 @@ parallel_max_likelihood_calculator_BM_OU_DD = function(
     eval(
       parse(
         text=paste(
-          "setwd('likelihood_results/DDlin_pos_likelihood_",
+          "write.csv(DDlin_pos_data, file = '/ddn/data/ckkr89/likelihood_results/DDlin_pos_likelihood_",
           rand.string,
-          "')",
-          sep=""
+          "/DDlin_pos_data.csv')",
+          sep = ""
         )
       )
     )
-    write.csv(DDlin_pos_data, file = "DDlin_pos_data.csv")
     
   } else {
     stop("Enter an applicable model")
@@ -1005,29 +1030,36 @@ clusterApply(
   cl,
   1:100,
   parallel_max_likelihood_calculator_BM_OU_DD,
-  model = "DDexp_neg"
+  model = "OU"
 )
 
-clusterApply(
-  cl,
-  1:100,
-  parallel_max_likelihood_calculator_BM_OU_DD,
-  model = "DDexp_pos"
-)
-
-clusterApply(
-  cl,
-  1:100,
-  parallel_max_likelihood_calculator_BM_OU_DD,
-  model = "DDlin_neg"
-)
-
-clusterApply(
-  cl,
-  1:100,
-  parallel_max_likelihood_calculator_BM_OU_DD,
-  model = "DDlin_pos"
-)
+# clusterApply(
+#   cl,
+#   1:100,
+#   parallel_max_likelihood_calculator_BM_OU_DD,
+#   model = "DDexp_neg"
+# )
+# 
+# clusterApply(
+#   cl,
+#   1:100,
+#   parallel_max_likelihood_calculator_BM_OU_DD,
+#   model = "DDexp_pos"
+# )
+# 
+# clusterApply(
+#   cl,
+#   1:100,
+#   parallel_max_likelihood_calculator_BM_OU_DD,
+#   model = "DDlin_neg"
+# )
+# 
+# clusterApply(
+#   cl,
+#   1:100,
+#   parallel_max_likelihood_calculator_BM_OU_DD,
+#   model = "DDlin_pos"
+# )
 
 stopCluster(cl)
 

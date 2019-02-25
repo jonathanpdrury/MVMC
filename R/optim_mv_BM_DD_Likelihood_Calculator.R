@@ -11,7 +11,7 @@ max_likelihood_calculator_BM_OU_DD = function(
 ){
   require(phytools)
   require(mvMORPH)
-  require(MASS)
+  require(matlib)
   require(msos)
   
   if (model == "BM"){
@@ -426,10 +426,10 @@ max_likelihood_calculator_BM_OU_DD = function(
             
             tree.size = c(tree.size,names(tree.list[i]))
             tree.number = c(tree.number,k)
-            sig2.1 = c(sig2.1,DDpos.sig2.matrices[[j]][1])
-            sig2.2 = c(sig2.2,DDpos.sig2.matrices[[j]][2])
-            sig2.3 = c(sig2.3,DDpos.sig2.matrices[[j]][3])
-            sig2.4 = c(sig2.4,DDpos.sig2.matrices[[j]][4])
+            sig2.1 = c(sig2.1,sig2.matrices[[j]][1])
+            sig2.2 = c(sig2.2,sig2.matrices[[j]][2])
+            sig2.3 = c(sig2.3,sig2.matrices[[j]][3])
+            sig2.4 = c(sig2.4,sig2.matrices[[j]][4])
             root.1 = c(root.1,0)
             root.2 = c(root.2,0)
             r.term.1 = c(r.term.1,pars.list[[i]][[j]][[k]][1])
@@ -601,7 +601,7 @@ max_likelihood_calculator_BM_OU_DD = function(
       convergence
     )
     
-    write.csv(DDlin_neg_data, file = "DDpos_neg_data.csv")
+    write.csv(DDlin_neg_data, file = "DDlin_neg_data.csv")
     
   } else if (model == "DDlin_pos"){
     setwd('/ddn/home/ckkr89/Project Data/complete_sim_results/complete_DDlin_pos')
@@ -668,10 +668,10 @@ max_likelihood_calculator_BM_OU_DD = function(
             
             tree.size = c(tree.size,names(tree.list[i]))
             tree.number = c(tree.number,k)
-            sig2.1 = c(sig2.1,DDpos.sig2.matrices[[j]][1])
-            sig2.2 = c(sig2.2,DDpos.sig2.matrices[[j]][2])
-            sig2.3 = c(sig2.3,DDpos.sig2.matrices[[j]][3])
-            sig2.4 = c(sig2.4,DDpos.sig2.matrices[[j]][4])
+            sig2.1 = c(sig2.1,sig2.matrices[[j]][1])
+            sig2.2 = c(sig2.2,sig2.matrices[[j]][2])
+            sig2.3 = c(sig2.3,sig2.matrices[[j]][3])
+            sig2.4 = c(sig2.4,sig2.matrices[[j]][4])
             root.1 = c(root.1,0)
             root.2 = c(root.2,0)
             r.term.1 = c(r.term.1,pars.list[[i]][[j]][[k]][1])
@@ -729,7 +729,51 @@ max_likelihood_calculator_BM_OU_DD = function(
   }
 }
 
-max_likelihood_calculator_BM_OU_DD("OU")
+#max_likelihood_calculator_BM_OU_DD("OU")
+
+no.cores = detectCores()
+cl = makeCluster(no.cores, type=getClusterOption("type"),outfile='')
+ex <- Filter(function(x) is.function(get(x, .GlobalEnv)), ls(.GlobalEnv))
+clusterExport(cl, ls())
+clusterEvalQ(cl,eval(parse(file = 'PhenotypicModel.R', n = 1)))
+clusterEvalQ(cl,eval(parse(file = 'PhenotypicADiag.R', n = 1)))
+
+# clusterApply(
+#   cl,
+#   1:100,
+#   parallel_max_likelihood_calculator_BM_OU_DD,
+#   model = "OU"
+# )
+
+# clusterApply(
+#   cl,
+#   1:100,
+#   parallel_max_likelihood_calculator_BM_OU_DD,
+#   model = "DDexp_neg"
+# )
+# 
+clusterApply(
+  cl,
+  1:100,
+  parallel_max_likelihood_calculator_BM_OU_DD,
+  model = "DDexp_pos"
+)
+# 
+# clusterApply(
+#   cl,
+#   1:100,
+#   parallel_max_likelihood_calculator_BM_OU_DD,
+#   model = "DDlin_neg"
+# )
+# 
+# clusterApply(
+#   cl,
+#   1:100,
+#   parallel_max_likelihood_calculator_BM_OU_DD,
+#   model = "DDlin_pos"
+# )
+
+stopCluster(cl)
 
 
 
