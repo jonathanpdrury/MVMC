@@ -415,24 +415,20 @@ parallel_max_likelihood_calculator_BM_OU_DD = function(
     tree.number = c()
     sig2.1 = c()
     sig2.2 = c()
-    sig2.3 = c()
-    sig2.4 = c()
+    sig2.cov = c()
     root.1 = c()
     root.2 = c()
     r.term.1 = c()
     r.term.2 = c()
-    r.term.3 = c()
-    r.term.4 = c()
+    r.term.cov = c()
     est.sig2.1 = c()
     est.sig2.2 = c()
-    est.sig2.3 = c()
-    est.sig2.4 = c()
+    est.sig2.cov = c()
     est.root.1 = c()
     est.root.2 = c()
     est.r.term.1 = c()
     est.r.term.2 = c()
-    est.r.term.3 = c()
-    est.r.term.4 = c()
+    est.r.term.cov = c()
     log.likelihood = c()
     convergence = c()
     
@@ -456,37 +452,45 @@ parallel_max_likelihood_calculator_BM_OU_DD = function(
           sim.results = get(x)
           
           for (l in Nsim){
+            ##estimate sig2 parameters to put into optim
+            trait.1 = c()
+            trait.2 = c()
+            for (m in 1:length(sim.results[[l]])){
+              trait.1 = c(trait.1,sim.results[[l]][[m]][1])
+              trait.2 = c(trait.2,sim.results[[l]][[m]][2])
+            }
+            
+            sig2.1var = log(var(trait.1)/max(nodeHeights(tree.list[[i]][[l]])))
+            sig2.2var = log(var(trait.2)/max(nodeHeights(tree.list[[i]][[l]])))
+              
             result = optim(
-              par = c(0.5,0,0,1,1,0.5,-0.1,-0.05,-0.05,-0.1),
+              par = c(sig2.1var,sig2.2var,0,0,0,0,0,0),
               fn = log_likelihood_mv_BM_DD,
               tree = tree.list[[i]][[l]],
               sim.value = sim.results[[l]],
               model = "DDexp",
-              optim = TRUE
+              optim = TRUE,
+              control = list(maxit = 2000)
             )
             
             tree.size = c(tree.size,names(tree.list[i]))
             tree.number = c(tree.number,k)
             sig2.1 = c(sig2.1,sig2.matrices[[j]][1])
-            sig2.2 = c(sig2.2,sig2.matrices[[j]][2])
-            sig2.3 = c(sig2.3,sig2.matrices[[j]][3])
-            sig2.4 = c(sig2.4,sig2.matrices[[j]][4])
+            sig2.2 = c(sig2.2,sig2.matrices[[j]][4])
+            sig2.cov = c(sig2.cov,sig2.matrices[[j]][2])
             root.1 = c(root.1,0)
             root.2 = c(root.2,0)
             r.term.1 = c(r.term.1,pars.list[[i]][[j]][[k]][1])
-            r.term.2 = c(r.term.2,pars.list[[i]][[j]][[k]][2])
-            r.term.3 = c(r.term.3,pars.list[[i]][[j]][[k]][3])
-            r.term.4 = c(r.term.4,pars.list[[i]][[j]][[k]][4])
-            est.sig2.1 = c(est.sig2.1,result[[1]][1])
-            est.sig2.2 = c(est.sig2.2,result[[1]][2])
-            est.sig2.3 = c(est.sig2.3,result[[1]][3])
-            est.sig2.4 = c(est.sig2.4,result[[1]][4])
-            est.root.1 = c(est.root.1,result[[1]][5])
-            est.root.2 = c(est.root.2,result[[1]][6])
-            est.r.term.1 = c(est.r.term.1,result[[1]][7])
-            est.r.term.2 = c(est.r.term.2,result[[1]][8])
-            est.r.term.3 = c(est.r.term.3,result[[1]][9])
-            est.r.term.4 = c(est.r.term.4,result[[1]][10])
+            r.term.2 = c(r.term.2,pars.list[[i]][[j]][[k]][4])
+            r.term.cov = c(r.term.cov,pars.list[[i]][[j]][[k]][2])
+            est.sig2.1 = c(est.sig2.1,exp(result[[1]][1]))
+            est.sig2.2 = c(est.sig2.2,exp(result[[1]][2]))
+            est.sig2.cov = c(est.sig2.cov,result[[1]][3])
+            est.root.1 = c(est.root.1,result[[1]][4])
+            est.root.2 = c(est.root.2,result[[1]][5])
+            est.r.term.1 = c(est.r.term.1,result[[1]][6])
+            est.r.term.2 = c(est.r.term.2,result[[1]][7])
+            est.r.term.cov = c(est.r.term.cov,result[[1]][8])
             log.likelihood = c(log.likelihood,result[[2]])
             convergence = c(convergence,result[[4]])
           }
@@ -499,24 +503,20 @@ parallel_max_likelihood_calculator_BM_OU_DD = function(
       tree.number,
       sig2.1,
       sig2.2,
-      sig2.3,
-      sig2.4,
+      sig2.cov,
       root.1,
       root.2,
       r.term.1,
       r.term.2,
-      r.term.3,
-      r.term.4,
+      r.term.cov,
       est.sig2.1,
       est.sig2.2,
-      est.sig2.3,
-      est.sig2.4,
+      est.sig2.cov,
       est.root.1,
       est.root.2,
       est.r.term.1,
       est.r.term.2,
-      est.r.term.3,
-      est.r.term.4,
+      est.r.term.cov,
       log.likelihood,
       convergence
     )
@@ -574,24 +574,20 @@ parallel_max_likelihood_calculator_BM_OU_DD = function(
     tree.number = c()
     sig2.1 = c()
     sig2.2 = c()
-    sig2.3 = c()
-    sig2.4 = c()
+    sig2.cov = c()
     root.1 = c()
     root.2 = c()
     r.term.1 = c()
     r.term.2 = c()
-    r.term.3 = c()
-    r.term.4 = c()
+    r.term.cov = c()
     est.sig2.1 = c()
     est.sig2.2 = c()
-    est.sig2.3 = c()
-    est.sig2.4 = c()
+    est.sig2.cov = c()
     est.root.1 = c()
     est.root.2 = c()
     est.r.term.1 = c()
     est.r.term.2 = c()
-    est.r.term.3 = c()
-    est.r.term.4 = c()
+    est.r.term.cov = c()
     log.likelihood = c()
     convergence = c()
     
@@ -615,37 +611,45 @@ parallel_max_likelihood_calculator_BM_OU_DD = function(
           sim.results = get(x)
           
           for (l in Nsim){
+            ##estimate sig2 parameters to put into optim
+            trait.1 = c()
+            trait.2 = c()
+            for (m in 1:length(sim.results[[l]])){
+              trait.1 = c(trait.1,sim.results[[l]][[m]][1])
+              trait.2 = c(trait.2,sim.results[[l]][[m]][2])
+            }
+            
+            sig2.1var = log(var(trait.1)/max(nodeHeights(tree.list[[i]][[l]])))
+            sig2.2var = log(var(trait.2)/max(nodeHeights(tree.list[[i]][[l]])))
+            
             result = optim(
-              par = c(0.5,0,0,1,1,0.5,-0.1,-0.05,-0.05,-0.1),
+              par = c(sig2.1var,sig2.2var,0,0,0,0,0,0),
               fn = log_likelihood_mv_BM_DD,
               tree = tree.list[[i]][[l]],
               sim.value = sim.results[[l]],
               model = "DDexp",
-              optim = TRUE
+              optim = TRUE,
+              control = list(maxit = 2000)
             )
             
             tree.size = c(tree.size,names(tree.list[i]))
             tree.number = c(tree.number,k)
             sig2.1 = c(sig2.1,sig2.matrices[[j]][1])
-            sig2.2 = c(sig2.2,sig2.matrices[[j]][2])
-            sig2.3 = c(sig2.3,sig2.matrices[[j]][3])
-            sig2.4 = c(sig2.4,sig2.matrices[[j]][4])
+            sig2.2 = c(sig2.2,sig2.matrices[[j]][4])
+            sig2.cov = c(sig2.cov,sig2.matrices[[j]][2])
             root.1 = c(root.1,0)
             root.2 = c(root.2,0)
             r.term.1 = c(r.term.1,pars.list[[i]][[j]][[k]][1])
-            r.term.2 = c(r.term.2,pars.list[[i]][[j]][[k]][2])
-            r.term.3 = c(r.term.3,pars.list[[i]][[j]][[k]][3])
-            r.term.4 = c(r.term.4,pars.list[[i]][[j]][[k]][4])
-            est.sig2.1 = c(est.sig2.1,result[[1]][1])
-            est.sig2.2 = c(est.sig2.2,result[[1]][2])
-            est.sig2.3 = c(est.sig2.3,result[[1]][3])
-            est.sig2.4 = c(est.sig2.4,result[[1]][4])
-            est.root.1 = c(est.root.1,result[[1]][5])
-            est.root.2 = c(est.root.2,result[[1]][6])
-            est.r.term.1 = c(est.r.term.1,result[[1]][7])
-            est.r.term.2 = c(est.r.term.2,result[[1]][8])
-            est.r.term.3 = c(est.r.term.3,result[[1]][9])
-            est.r.term.4 = c(est.r.term.4,result[[1]][10])
+            r.term.2 = c(r.term.2,pars.list[[i]][[j]][[k]][4])
+            r.term.cov = c(r.term.cov,pars.list[[i]][[j]][[k]][2])
+            est.sig2.1 = c(est.sig2.1,exp(result[[1]][1]))
+            est.sig2.2 = c(est.sig2.2,exp(result[[1]][2]))
+            est.sig2.cov = c(est.sig2.cov,result[[1]][3])
+            est.root.1 = c(est.root.1,result[[1]][4])
+            est.root.2 = c(est.root.2,result[[1]][5])
+            est.r.term.1 = c(est.r.term.1,result[[1]][6])
+            est.r.term.2 = c(est.r.term.2,result[[1]][7])
+            est.r.term.cov = c(est.r.term.cov,result[[1]][8])
             log.likelihood = c(log.likelihood,result[[2]])
             convergence = c(convergence,result[[4]])
           }
@@ -658,24 +662,20 @@ parallel_max_likelihood_calculator_BM_OU_DD = function(
       tree.number,
       sig2.1,
       sig2.2,
-      sig2.3,
-      sig2.4,
+      sig2.cov,
       root.1,
       root.2,
       r.term.1,
       r.term.2,
-      r.term.3,
-      r.term.4,
+      r.term.cov,
       est.sig2.1,
       est.sig2.2,
-      est.sig2.3,
-      est.sig2.4,
+      est.sig2.cov,
       est.root.1,
       est.root.2,
       est.r.term.1,
       est.r.term.2,
-      est.r.term.3,
-      est.r.term.4,
+      est.r.term.cov,
       log.likelihood,
       convergence
     )
@@ -733,24 +733,20 @@ parallel_max_likelihood_calculator_BM_OU_DD = function(
     tree.number = c()
     sig2.1 = c()
     sig2.2 = c()
-    sig2.3 = c()
-    sig2.4 = c()
+    sig2.cov = c()
     root.1 = c()
     root.2 = c()
     slope.term.1 = c()
     slope.term.2 = c()
-    slope.term.3 = c()
-    slope.term.4 = c()
+    slope.term.cov = c()
     est.sig2.1 = c()
     est.sig2.2 = c()
-    est.sig2.3 = c()
-    est.sig2.4 = c()
+    est.sig2.cov = c()
     est.root.1 = c()
     est.root.2 = c()
     est.slope.term.1 = c()
     est.slope.term.2 = c()
-    est.slope.term.3 = c()
-    est.slope.term.4 = c()
+    est.slope.term.cov = c()
     log.likelihood = c()
     convergence = c()
     
@@ -774,37 +770,45 @@ parallel_max_likelihood_calculator_BM_OU_DD = function(
           sim.results = get(x)
           
           for (l in Nsim){
+            ##estimate sig2 parameters to put into optim
+            trait.1 = c()
+            trait.2 = c()
+            for (m in 1:length(sim.results[[l]])){
+              trait.1 = c(trait.1,sim.results[[l]][[m]][1])
+              trait.2 = c(trait.2,sim.results[[l]][[m]][2])
+            }
+            
+            sig2.1var = log(var(trait.1)/max(nodeHeights(tree.list[[i]][[l]])))
+            sig2.2var = log(var(trait.2)/max(nodeHeights(tree.list[[i]][[l]])))
+            
             result = optim(
-              par = c(0.5,0,0,1,1,0.5,-0.1,-0.05,-0.05,-0.1),
+              par = c(sig2.1var,sig2.2var,0,0,0,0,0,0),
               fn = log_likelihood_mv_BM_DD,
               tree = tree.list[[i]][[l]],
               sim.value = sim.results[[l]],
               model = "DDlin",
-              optim = TRUE
+              optim = TRUE,
+              control = list(maxit = 2000)
             )
             
             tree.size = c(tree.size,names(tree.list[i]))
             tree.number = c(tree.number,k)
             sig2.1 = c(sig2.1,sig2.matrices[[j]][1])
-            sig2.2 = c(sig2.2,sig2.matrices[[j]][2])
-            sig2.3 = c(sig2.3,sig2.matrices[[j]][3])
-            sig2.4 = c(sig2.4,sig2.matrices[[j]][4])
+            sig2.2 = c(sig2.2,sig2.matrices[[j]][4])
+            sig2.cov = c(sig2.cov,sig2.matrices[[j]][2])
             root.1 = c(root.1,0)
             root.2 = c(root.2,0)
             slope.term.1 = c(slope.term.1,pars.list[[i]][[j]][[k]][1])
-            slope.term.2 = c(slope.term.2,pars.list[[i]][[j]][[k]][2])
-            slope.term.3 = c(slope.term.3,pars.list[[i]][[j]][[k]][3])
-            slope.term.4 = c(slope.term.4,pars.list[[i]][[j]][[k]][4])
-            est.sig2.1 = c(est.sig2.1,result[[1]][1])
-            est.sig2.2 = c(est.sig2.2,result[[1]][2])
-            est.sig2.3 = c(est.sig2.3,result[[1]][3])
-            est.sig2.4 = c(est.sig2.4,result[[1]][4])
-            est.root.1 = c(est.root.1,result[[1]][5])
-            est.root.2 = c(est.root.2,result[[1]][6])
-            est.slope.term.1 = c(est.slope.term.1,result[[1]][7])
-            est.slope.term.2 = c(est.slope.term.2,result[[1]][8])
-            est.slope.term.3 = c(est.slope.term.3,result[[1]][9])
-            est.slope.term.4 = c(est.slope.term.4,result[[1]][10])
+            slope.term.2 = c(slope.term.2,pars.list[[i]][[j]][[k]][4])
+            slope.term.cov = c(slope.term.cov,pars.list[[i]][[j]][[k]][2])
+            est.sig2.1 = c(est.sig2.1,exp(result[[1]][1]))
+            est.sig2.2 = c(est.sig2.2,exp(result[[1]][2]))
+            est.sig2.cov = c(est.sig2.cov,result[[1]][3])
+            est.root.1 = c(est.root.1,result[[1]][4])
+            est.root.2 = c(est.root.2,result[[1]][5])
+            est.slope.term.1 = c(est.slope.term.1,result[[1]][6])
+            est.slope.term.2 = c(est.slope.term.2,result[[1]][7])
+            est.slope.term.cov = c(est.slope.term.cov,result[[1]][8])
             log.likelihood = c(log.likelihood,result[[2]])
             convergence = c(convergence,result[[4]])
           }
@@ -817,24 +821,20 @@ parallel_max_likelihood_calculator_BM_OU_DD = function(
       tree.number,
       sig2.1,
       sig2.2,
-      sig2.3,
-      sig2.4,
+      sig2.cov,
       root.1,
       root.2,
       slope.term.1,
       slope.term.2,
-      slope.term.3,
-      slope.term.4,
+      slope.term.cov,
       est.sig2.1,
       est.sig2.2,
-      est.sig2.3,
-      est.sig2.4,
+      est.sig2.cov,
       est.root.1,
       est.root.2,
       est.slope.term.1,
       est.slope.term.2,
-      est.slope.term.3,
-      est.slope.term.4,
+      est.slope.term.cov,
       log.likelihood,
       convergence
     )
@@ -892,24 +892,20 @@ parallel_max_likelihood_calculator_BM_OU_DD = function(
     tree.number = c()
     sig2.1 = c()
     sig2.2 = c()
-    sig2.3 = c()
-    sig2.4 = c()
+    sig2.cov = c()
     root.1 = c()
     root.2 = c()
     slope.term.1 = c()
     slope.term.2 = c()
-    slope.term.3 = c()
-    slope.term.4 = c()
+    slope.term.cov = c()
     est.sig2.1 = c()
     est.sig2.2 = c()
-    est.sig2.3 = c()
-    est.sig2.4 = c()
+    est.sig2.cov = c()
     est.root.1 = c()
     est.root.2 = c()
     est.slope.term.1 = c()
     est.slope.term.2 = c()
-    est.slope.term.3 = c()
-    est.slope.term.4 = c()
+    est.slope.term.cov = c()
     log.likelihood = c()
     convergence = c()
     
@@ -933,13 +929,25 @@ parallel_max_likelihood_calculator_BM_OU_DD = function(
           sim.results = get(x)
           
           for (l in Nsim){
+            ##estimate sig2 parameters to put into optim
+            trait.1 = c()
+            trait.2 = c()
+            for (m in 1:length(sim.results[[l]])){
+              trait.1 = c(trait.1,sim.results[[l]][[m]][1])
+              trait.2 = c(trait.2,sim.results[[l]][[m]][2])
+            }
+            
+            sig2.1var = log(var(trait.1)/max(nodeHeights(tree.list[[i]][[l]])))
+            sig2.2var = log(var(trait.2)/max(nodeHeights(tree.list[[i]][[l]])))
+            
             result = optim(
-              par = c(0.5,0,0,1,1,0.5,-0.1,-0.05,-0.05,-0.1),
+              par = c(sig2.1var,sig2.2var,0,0,0,0,0,0),
               fn = log_likelihood_mv_BM_DD,
               tree = tree.list[[i]][[l]],
               sim.value = sim.results[[l]],
               model = "DDlin",
-              optim = TRUE
+              optim = TRUE,
+              control = list(maxit = 2000)
             )
             
             #calculate the position of the values in the data frame
@@ -948,25 +956,21 @@ parallel_max_likelihood_calculator_BM_OU_DD = function(
             tree.size = c(tree.size,names(tree.list[i]))
             tree.number = c(tree.number,k)
             sig2.1 = c(sig2.1,sig2.matrices[[j]][1])
-            sig2.2 = c(sig2.2,sig2.matrices[[j]][2])
-            sig2.3 = c(sig2.3,sig2.matrices[[j]][3])
-            sig2.4 = c(sig2.4,sig2.matrices[[j]][4])
+            sig2.2 = c(sig2.2,sig2.matrices[[j]][4])
+            sig2.cov = c(sig2.cov,sig2.matrices[[j]][2])
             root.1 = c(root.1,0)
             root.2 = c(root.2,0)
             slope.term.1 = c(slope.term.1,pars.list[[i]][[j]][[k]][1])
-            slope.term.2 = c(slope.term.2,pars.list[[i]][[j]][[k]][2])
-            slope.term.3 = c(slope.term.3,pars.list[[i]][[j]][[k]][3])
-            slope.term.4 = c(slope.term.4,pars.list[[i]][[j]][[k]][4])
-            est.sig2.1 = c(est.sig2.1,result[[1]][1])
-            est.sig2.2 = c(est.sig2.2,result[[1]][2])
-            est.sig2.3 = c(est.sig2.3,result[[1]][3])
-            est.sig2.4 = c(est.sig2.4,result[[1]][4])
-            est.root.1 = c(est.root.1,result[[1]][5])
-            est.root.2 = c(est.root.2,result[[1]][6])
-            est.slope.term.1 = c(est.slope.term.1,result[[1]][7])
-            est.slope.term.2 = c(est.slope.term.2,result[[1]][8])
-            est.slope.term.3 = c(est.slope.term.3,result[[1]][9])
-            est.slope.term.4 = c(est.slope.term.4,result[[1]][10])
+            slope.term.2 = c(slope.term.2,pars.list[[i]][[j]][[k]][4])
+            slope.term.cov = c(slope.term.cov,pars.list[[i]][[j]][[k]][2])
+            est.sig2.1 = c(est.sig2.1,exp(result[[1]][1]))
+            est.sig2.2 = c(est.sig2.2,exp(result[[1]][2]))
+            est.sig2.cov = c(est.sig2.cov,result[[1]][3])
+            est.root.1 = c(est.root.1,result[[1]][4])
+            est.root.2 = c(est.root.2,result[[1]][5])
+            est.slope.term.1 = c(est.slope.term.1,result[[1]][6])
+            est.slope.term.2 = c(est.slope.term.2,result[[1]][7])
+            est.slope.term.cov = c(est.slope.term.cov,result[[1]][8])
             log.likelihood = c(log.likelihood,result[[2]])
             convergence = c(convergence,result[[4]])
           }
@@ -974,29 +978,25 @@ parallel_max_likelihood_calculator_BM_OU_DD = function(
       }
     }
     
-    DDlin_pos_data = data.frame(
+    DDlin_neg_data = data.frame(
       tree.size,
       tree.number,
       sig2.1,
       sig2.2,
-      sig2.3,
-      sig2.4,
+      sig2.cov,
       root.1,
       root.2,
       slope.term.1,
       slope.term.2,
-      slope.term.3,
-      slope.term.4,
+      slope.term.cov,
       est.sig2.1,
       est.sig2.2,
-      est.sig2.3,
-      est.sig2.4,
+      est.sig2.cov,
       est.root.1,
       est.root.2,
       est.slope.term.1,
       est.slope.term.2,
-      est.slope.term.3,
-      est.slope.term.4,
+      est.slope.term.cov,
       log.likelihood,
       convergence
     )

@@ -2,7 +2,7 @@
 #setwd('J:/My_Documents/Project/Simulation Study/Preliminary Simulation/complete_sim_results')
 # source('Likelihood Test/PhenotypicModel.R') #from RPANDA (Marc Manceau)
 # source('Likelihood Test/PhenotypicADiag.R') #from RPANDA (Marc Manceau)
-# source('Likelihood Test/DDexp_nogeo_ADiag.R') #from RPANDA 
+# source('Likelihood Test/DDexp_nogeo_ADiag.R') #from RPANDA
 # source('Likelihood Test/DDlin_nogeo_ADiag.R') #from RPANDA
 log_likelihood_mv_BM_DD = function(
   tree,
@@ -20,10 +20,10 @@ log_likelihood_mv_BM_DD = function(
   
   
   if (optim){
-    sig2.matrix = matrix(par[1:4],ncol=2)
-    root = par[5:6]
+    sig2.matrix = matrix(c(exp(par[1]),par[3],par[3],exp(par[2])),ncol=2)
+    root = par[4:5]
     if (model=="DDexp"||model=="DDlin"){
-      slope.matrix = matrix(par[7:10],ncol=2)
+      slope.matrix = matrix(c(par[6],par[8],par[8],par[7]),ncol=2)
     }
   }
   
@@ -80,11 +80,11 @@ log_likelihood_mv_BM_DD = function(
     }
   } else {
     log.likelihood = -0.5*(t(data.root.difference)%*%chol2inv(chol(vcv.sig2.product))%*%data.root.difference) - 0.5*log.det.product - length(tree$tip.label)*length(root)*log(2*pi)*0.5
-    if (optim){
-      return(-log.likelihood)
-    } else {
-      return(log.likelihood)
-    }
+  }
+  if (optim){
+    return(-log.likelihood)
+  } else {
+    return(log.likelihood)
   }
 }
 
