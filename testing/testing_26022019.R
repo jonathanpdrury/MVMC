@@ -23,8 +23,12 @@ r.term = pars.list[[2]][[2]][[2]]
 sim.results = DDexp_neg_sim_tree_50_root_sig2_2_tip_sig2_2_complete[[1]]
 
 
-trait.1 = c(trait.1,sim.results[[1]][1])
-trait.2 = c(trait.2,sim.results[[1]][2])
+trait.1 = c()
+trait.2 = c()
+for (m in 1:length(sim.results)){
+  trait.1 = c(trait.1,sim.results[[m]][1])
+  trait.2 = c(trait.2,sim.results[[m]][2])
+}
 
 #double check: does the following keep the traits in the right order?
 traits<-data.frame(trait.1,trait.2)
@@ -34,6 +38,9 @@ rownames(traits)<-tree$tip.label
 
 fit = mvBM(tree,traits,model="BM1")
 #LogLikelihood: 	 -93.37694 
+
+##this shoudl return mv-vcv matrix
+kronecker(fit$sigma,vcv(tree))
 
 ##If we constrain the rate matrix to be 0 and pass the fit data from mvMORPH, should get the same likelihood
 
