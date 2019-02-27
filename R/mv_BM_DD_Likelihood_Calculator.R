@@ -6,7 +6,7 @@
 # source('Likelihood Test/DDlin_nogeo_ADiag.R') #from RPANDA
 log_likelihood_mv_BM_DD = function(
   tree,
-  par = NULL, ##for optimisation, is a vector of all of the parameters [1:4] being the sig2 matrix, [5:6] being the root, [7:10] being the slope
+  par = NULL, ##for optimisation, is a vector of all of the parameters [1:3] being the sig2 matrix, [4:5] being the root, [6:8] being the slope
   sig2.matrix = NULL,
   slope.matrix = NULL,
   root = NULL,
