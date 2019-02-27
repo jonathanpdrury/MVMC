@@ -62,7 +62,7 @@ log_likelihood_mv_BM_DD = function(
     block3 = sign.sig12*block3
     
     #compile blocks
-    vcv.sig2.product = rbind(cbind(block1,block2),cbind(block3,block4))
+    vcv.sig2.product = rbind(cbind(block1[tree$tip.label,tree$tip.label],block2[tree$tip.label,tree$tip.label]),cbind(block3[tree$tip.label,tree$tip.label],block4[tree$tip.label,tree$tip.label]))
   }
   
   D=kronecker(diag(2),matrix(1,ncol=1,nrow=length(tree$tip.label)))
