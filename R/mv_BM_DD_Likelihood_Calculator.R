@@ -74,18 +74,14 @@ log_likelihood_mv_BM_DD = function(
   if (class(test) == "try-error"){
     test = try(ginv(vcv.sig2.product))
     if (class(test) == "try-error"){
-      return(1E6)
+      return(1E-50)
     } else {
       log.likelihood = -0.5*(t(data.root.difference)%*%ginv(vcv.sig2.product)%*%data.root.difference) - 0.5*log.det.product - length(tree$tip.label)*length(root)*log(2*pi)*0.5
     }
   } else {
     log.likelihood = -0.5*(t(data.root.difference)%*%chol2inv(chol(vcv.sig2.product))%*%data.root.difference) - 0.5*log.det.product - length(tree$tip.label)*length(root)*log(2*pi)*0.5
   }
-  if (optim){
-    return(-log.likelihood)
-  } else {
-    return(log.likelihood)
-  }
+  return(log.likelihood)
 }
 
 
