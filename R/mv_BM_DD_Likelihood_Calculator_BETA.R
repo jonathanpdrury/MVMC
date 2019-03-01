@@ -4,6 +4,9 @@
 # source('Likelihood Test/PhenotypicADiag.R') #from RPANDA (Marc Manceau)
 # source('Likelihood Test/DDexp_nogeo_ADiag.R') #from RPANDA
 # source('Likelihood Test/DDlin_nogeo_ADiag.R') #from RPANDA
+library(corpcor)
+##this version removes the covariance from the slope term (to use if covariance terms are unidentifiable)
+
 log_likelihood_mv_BM_DD_BETA= function(
   tree,
   par = NULL, ##for optimisation, is a vector of all of the parameters [1:3] being the sig2 values, [4:5] being the slope
@@ -20,7 +23,9 @@ log_likelihood_mv_BM_DD_BETA= function(
   require(MASS)
   require(msos)
   
-    
+if (!model %in% c("BM","DDexp","DDlin")){
+    stop("model must be BM, DDexp or DDlin")
+  }
   
 if (optim){
     sig2.matrix = matrix(c(exp(par[1]),par[3],par[3],exp(par[2])),ncol=2)
@@ -42,12 +47,7 @@ if (optim){
 }
   
   
-  if (!model %in% c("BM","DDexp","DDlin")){
-    stop("model must be BM, DDexp or DDlin")
-  }
-
-##there is an error here--what should this be? vector of 100? or 
-  sim_values = c()
+ sim_values = c()
   sorted.sim = sim.value[tree$tip.label]
   for (i in 1:dim(sig2.matrix)[1]){
     for (j in 1:length(tree$tip.label)){
@@ -65,15 +65,13 @@ if (optim){
     av.sig12 = abs(sig2.matrix[1,2])
     
     block1 = getTipDistribution(dd.ob,params=c(0,log(sqrt(sig2.matrix[1,1])),slope.matrix[1,1]))$Sigma
-    block2 = getTipDistribution(dd.ob,params=c(0,log(sqrt(av.sig12)),slope.matrix[1,2]))$Sigma
-    block3 = getTipDistribution(dd.ob,params=c(0,log(sqrt(av.sig12)),slope.matrix[2,1]))$Sigma
+    block2_3 = av.sig12*vcv(tree)
     block4 = getTipDistribution(dd.ob,params=c(0,log(sqrt(sig2.matrix[2,2])),slope.matrix[2,2]))$Sigma
     
-    block2 = sign.sig12*block2
-    block3 = sign.sig12*block3
+    block2_3 = sign.sig12*block2_3
     
     #compile blocks
-    vcv.sig2.product = rbind(cbind(block1[tree$tip.label,tree$tip.label],block2[tree$tip.label,tree$tip.label]),cbind(block3[tree$tip.label,tree$tip.label],block4[tree$tip.label,tree$tip.label]))
+    vcv.sig2.product = rbind(cbind(block1[tree$tip.label,tree$tip.label],block2_3[tree$tip.label,tree$tip.label]),cbind(block2_3[tree$tip.label,tree$tip.label],block4[tree$tip.label,tree$tip.label]))
   }
   
 D=kronecker(diag(2),matrix(1,ncol=1,nrow=length(tree$tip.label)))
@@ -95,17 +93,31 @@ if (class(IV) == "try-error"){
       return(-1E6)
       
     } else {
-    
-	  theta<-solve(t(D)%*%IV%*%D)%*%t(D)%*%IV%*%sim_values
-	  if(return.anc){return(theta)} 
-      data.root.difference = (sim_values - (D%*%theta))
-  	  log.det.product = logdet(vcv.sig2.product)
-      log.likelihood = -0.5*(t(data.root.difference)%*%IV%*%data.root.difference) - 0.5*log.det.product - length(tree$tip.label)*length(root)*log(2*pi)*0.5
+  
+  		op <- getOption("show.error.messages")
+ 		options(show.error.messages=FALSE)
+		theta<-try(solve(t(D)%*%IV%*%D)%*%t(D)%*%IV%*%sim_values)
+    	options(show.error.messages=op)
+    	if(class(theta)=="try-error"){
+			theta<-corpcor::pseudoinverse(t(D)%*%IV%*%D)%*%t(D)%*%IV%*%sim_values
+    	}
+		
+		if(return.anc){return(theta)} 
+      	data.root.difference = (sim_values - (D%*%theta))
+  	  	log.det.product = logdet(vcv.sig2.product)
+      	log.likelihood = -0.5*(t(data.root.difference)%*%IV%*%data.root.difference) - 0.5*log.det.product - length(tree$tip.label)*length(root)*log(2*pi)*0.5
     }
     
   } else {
   
-	theta<-solve(t(D)%*%IV%*%D)%*%t(D)%*%IV%*%sim_values
+  	op <- getOption("show.error.messages")
+ 	options(show.error.messages=FALSE)
+	theta<-try(solve(t(D)%*%IV%*%D)%*%t(D)%*%IV%*%sim_values)
+    options(show.error.messages=op)
+    if(class(theta)=="try-error"){
+		theta<-corpcor::pseudoinverse(t(D)%*%IV%*%D)%*%t(D)%*%IV%*%sim_values
+    }
+
 	if(return.anc){return(theta)} 
     data.root.difference = (sim_values - (D%*%theta))
   	log.det.product = logdet(vcv.sig2.product)

@@ -46,7 +46,6 @@ if (optim){
     stop("model must be BM, DDexp or DDlin")
   }
 
-##there is an error here--what should this be? vector of 100? or 
   sim_values = c()
   sorted.sim = sim.value[tree$tip.label]
   for (i in 1:dim(sig2.matrix)[1]){
