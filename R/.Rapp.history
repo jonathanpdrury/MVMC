@@ -1,0 +1,2321 @@
+sim_values
+length(root)
+dim(sig2.matrix)
+dim(sig2.matrix)[1]
+sim_values = c()#
+  sorted.sim = sim.value[tree$tip.label]#
+  for (i in 1:length(dim(sig2.matrix)[1])){#
+    for (j in 1:length(tree$tip.label)){#
+      position = j+((i-1)*length(tree$tip.label))#
+      sim_values[position] = sorted.sim[[j]][i]#
+    }#
+  }
+sim_values
+i
+sim_values = c()#
+  sorted.sim = sim.value[tree$tip.label]#
+  for (i in 1:dim(sig2.matrix)[1]){#
+    for (j in 1:length(tree$tip.label)){#
+      position = j+((i-1)*length(tree$tip.label))#
+      sim_values[position] = sorted.sim[[j]][i]#
+    }#
+  }
+sim_values
+sorted.sim
+sim_values
+theta<-solve(t(D)%*%IV%*%D)%*%t(D)%*%IV%*%sim_values
+theta
+data.root.difference = (sim_values - (D%*%theta))
+data.root.difference
+##setwd('D:/Documents/User/MBiol Project/Test/complete_sim_results')#
+#setwd('J:/My_Documents/Project/Simulation Study/Preliminary Simulation/complete_sim_results')#
+# source('Likelihood Test/PhenotypicModel.R') #from RPANDA (Marc Manceau)#
+# source('Likelihood Test/PhenotypicADiag.R') #from RPANDA (Marc Manceau)#
+# source('Likelihood Test/DDexp_nogeo_ADiag.R') #from RPANDA#
+# source('Likelihood Test/DDlin_nogeo_ADiag.R') #from RPANDA#
+log_likelihood_mv_BM_DD = function(#
+  tree,#
+  par = NULL, ##for optimisation, is a vector of all of the parameters [1:3] being the sig2 matrix, [4:6] being the slope#
+  sig2.matrix = NULL,#
+  slope.matrix = NULL,#
+  sim.value,#
+  model,#
+  optim = FALSE#
+  return.anc = FALSE#
+){#
+  require(phytools)#
+  require(MASS)#
+  require(msos)#
+  no.taxa=length(sim.value)#
+if (optim){#
+    sig2.matrix = matrix(c(exp(par[1]),par[3],par[3],exp(par[2])),ncol=2)#
+    if (model=="DDexp"||model=="DDlin"){#
+   		slope.matrix = matrix(c(par[4],par[6],par[6],par[5]),ncol=2)#
+  		test = sig2.matrix*exp(slope.matrix*50)#
+  		if(test[1,2]>test[1,1] || test[1,2]>test[2,2]){#
+ 			 return(-1E6)#
+  		}#
+    } else {#
+  		if(sig2.matrix[1,2]>sig2.matrix[1,1] || sig2.matrix[1,2]>sig2.matrix[2,2]){#
+ 			 return(-1E6)#
+  		}#
+    }#
+}#
+  if (!model %in% c("BM","DDexp","DDlin")){#
+    stop("model must be BM, DDexp or DDlin")#
+  }#
+#
+##there is an error here--what should this be? vector of 100? or #
+  sim_values = c()#
+  sorted.sim = sim.value[tree$tip.label]#
+  for (i in 1:dim(sig2.matrix)[1]){#
+    for (j in 1:length(tree$tip.label)){#
+      position = j+((i-1)*length(tree$tip.label))#
+      sim_values[position] = sorted.sim[[j]][i]#
+    }#
+  }#
+  if (model=="BM"){#
+    vcv.tree = vcv(tree)#
+    vcv.sig2.product = kronecker(sig2.matrix,vcv.tree)#
+  } else {#
+    if (model=="DDexp"){	#
+      dd.ob = createModel_DDexp(tree)#
+    } else if (model=="DDlin") {#
+      dd.ob = createModel_DDlin(tree)#
+    }#
+    sign.sig12 = sign(sig2.matrix[1,2])#
+    av.sig12 = abs(sig2.matrix[1,2])#
+    block1 = getTipDistribution(dd.ob,params=c(0,log(sqrt(sig2.matrix[1,1])),slope.matrix[1,1]))$Sigma#
+    block2 = getTipDistribution(dd.ob,params=c(0,log(sqrt(av.sig12)),slope.matrix[1,2]))$Sigma#
+    block3 = getTipDistribution(dd.ob,params=c(0,log(sqrt(av.sig12)),slope.matrix[2,1]))$Sigma#
+    block4 = getTipDistribution(dd.ob,params=c(0,log(sqrt(sig2.matrix[2,2])),slope.matrix[2,2]))$Sigma#
+    block2 = sign.sig12*block2#
+    block3 = sign.sig12*block3#
+    #compile blocks#
+    vcv.sig2.product = rbind(cbind(block1[tree$tip.label,tree$tip.label],block2[tree$tip.label,tree$tip.label]),cbind(block3[tree$tip.label,tree$tip.label],block4[tree$tip.label,tree$tip.label]))#
+  }#
+  D=kronecker(diag(2),matrix(1,ncol=1,nrow=length(tree$tip.label)))#
+#	IV=try(solve(V))#
+#  	options(show.error.messages=op)#
+#  if(class(IV)=="try-error"){#
+#    IV=corpcor::pseudoinverse(V)#
+#  	if(max(IV)==0){return(Inf)}#
+#  }#
+#	data<-as.matrix(data[rownames(V)])#
+#	I<-matrix(rep(1,length(phylo$tip.label)))#
+#	theta<-solve(t(I)%*%IV%*%I)%*%t(I)%*%IV%*%data[,1]#
+#	D<-(I%*%theta)-data[,1]#
+  #log.likelihood = -0.5*(t(data.root.difference)%*%ginv(vcv.sig2.product)%*%data.root.difference) - 0.5*log.det.product - length(tree$tip.label)*length(root)*log(2*pi)*0.5#
+#
+op <- getOption("show.error.messages")#
+options(show.error.messages=FALSE)#
+IV = try(chol2inv(chol(vcv.sig2.product)))  #
+options(show.error.messages=op)#
+#
+if (class(IV) == "try-error"){#
+  	op <- getOption("show.error.messages")#
+ 	options(show.error.messages=FALSE)#
+    IV = try(ginv(vcv.sig2.product))#
+    options(show.error.messages=op)#
+#
+    if (class(IV) == "try-error"){#
+      return(-1E6)#
+    } else {#
+	  theta<-solve(t(D)%*%IV%*%D)%*%t(D)%*%IV%*%sim_values#
+	  if(return.anc){return(theta)} #
+      data.root.difference = (sim_values - (D%*%theta))#
+  	  log.det.product = logdet(vcv.sig2.product)#
+      log.likelihood = -0.5*(t(data.root.difference)%*%IV%*%data.root.difference) - 0.5*log.det.product - length(tree$tip.label)*length(root)*log(2*pi)*0.5#
+    }#
+  } else {#
+	theta<-solve(t(D)%*%IV%*%D)%*%t(D)%*%IV%*%sim_values#
+	if(return.anc){return(theta)} #
+    data.root.difference = (sim_values - (D%*%theta))#
+  	log.det.product = logdet(vcv.sig2.product)#
+    log.likelihood = -0.5*(t(data.root.difference)%*%IV%*%data.root.difference) - 0.5*log.det.product - length(tree$tip.label)*length(root)*log(2*pi)*0.5#
+  }#
+  return(log.likelihood)#
+}
+##setwd('D:/Documents/User/MBiol Project/Test/complete_sim_results')#
+#setwd('J:/My_Documents/Project/Simulation Study/Preliminary Simulation/complete_sim_results')#
+# source('Likelihood Test/PhenotypicModel.R') #from RPANDA (Marc Manceau)#
+# source('Likelihood Test/PhenotypicADiag.R') #from RPANDA (Marc Manceau)#
+# source('Likelihood Test/DDexp_nogeo_ADiag.R') #from RPANDA#
+# source('Likelihood Test/DDlin_nogeo_ADiag.R') #from RPANDA#
+log_likelihood_mv_BM_DD = function(#
+  tree,#
+  par = NULL, ##for optimisation, is a vector of all of the parameters [1:3] being the sig2 matrix, [4:6] being the slope#
+  sig2.matrix = NULL,#
+  slope.matrix = NULL,#
+  sim.value,#
+  model,#
+  optim = FALSE,#
+  return.anc = FALSE#
+){#
+  require(phytools)#
+  require(MASS)#
+  require(msos)#
+  no.taxa=length(sim.value)#
+if (optim){#
+    sig2.matrix = matrix(c(exp(par[1]),par[3],par[3],exp(par[2])),ncol=2)#
+    if (model=="DDexp"||model=="DDlin"){#
+   		slope.matrix = matrix(c(par[4],par[6],par[6],par[5]),ncol=2)#
+  		test = sig2.matrix*exp(slope.matrix*50)#
+  		if(test[1,2]>test[1,1] || test[1,2]>test[2,2]){#
+ 			 return(-1E6)#
+  		}#
+    } else {#
+  		if(sig2.matrix[1,2]>sig2.matrix[1,1] || sig2.matrix[1,2]>sig2.matrix[2,2]){#
+ 			 return(-1E6)#
+  		}#
+    }#
+}#
+  if (!model %in% c("BM","DDexp","DDlin")){#
+    stop("model must be BM, DDexp or DDlin")#
+  }#
+#
+##there is an error here--what should this be? vector of 100? or #
+  sim_values = c()#
+  sorted.sim = sim.value[tree$tip.label]#
+  for (i in 1:dim(sig2.matrix)[1]){#
+    for (j in 1:length(tree$tip.label)){#
+      position = j+((i-1)*length(tree$tip.label))#
+      sim_values[position] = sorted.sim[[j]][i]#
+    }#
+  }#
+  if (model=="BM"){#
+    vcv.tree = vcv(tree)#
+    vcv.sig2.product = kronecker(sig2.matrix,vcv.tree)#
+  } else {#
+    if (model=="DDexp"){	#
+      dd.ob = createModel_DDexp(tree)#
+    } else if (model=="DDlin") {#
+      dd.ob = createModel_DDlin(tree)#
+    }#
+    sign.sig12 = sign(sig2.matrix[1,2])#
+    av.sig12 = abs(sig2.matrix[1,2])#
+    block1 = getTipDistribution(dd.ob,params=c(0,log(sqrt(sig2.matrix[1,1])),slope.matrix[1,1]))$Sigma#
+    block2 = getTipDistribution(dd.ob,params=c(0,log(sqrt(av.sig12)),slope.matrix[1,2]))$Sigma#
+    block3 = getTipDistribution(dd.ob,params=c(0,log(sqrt(av.sig12)),slope.matrix[2,1]))$Sigma#
+    block4 = getTipDistribution(dd.ob,params=c(0,log(sqrt(sig2.matrix[2,2])),slope.matrix[2,2]))$Sigma#
+    block2 = sign.sig12*block2#
+    block3 = sign.sig12*block3#
+    #compile blocks#
+    vcv.sig2.product = rbind(cbind(block1[tree$tip.label,tree$tip.label],block2[tree$tip.label,tree$tip.label]),cbind(block3[tree$tip.label,tree$tip.label],block4[tree$tip.label,tree$tip.label]))#
+  }#
+  D=kronecker(diag(2),matrix(1,ncol=1,nrow=length(tree$tip.label)))#
+#	IV=try(solve(V))#
+#  	options(show.error.messages=op)#
+#  if(class(IV)=="try-error"){#
+#    IV=corpcor::pseudoinverse(V)#
+#  	if(max(IV)==0){return(Inf)}#
+#  }#
+#	data<-as.matrix(data[rownames(V)])#
+#	I<-matrix(rep(1,length(phylo$tip.label)))#
+#	theta<-solve(t(I)%*%IV%*%I)%*%t(I)%*%IV%*%data[,1]#
+#	D<-(I%*%theta)-data[,1]#
+  #log.likelihood = -0.5*(t(data.root.difference)%*%ginv(vcv.sig2.product)%*%data.root.difference) - 0.5*log.det.product - length(tree$tip.label)*length(root)*log(2*pi)*0.5#
+#
+op <- getOption("show.error.messages")#
+options(show.error.messages=FALSE)#
+IV = try(chol2inv(chol(vcv.sig2.product)))  #
+options(show.error.messages=op)#
+#
+if (class(IV) == "try-error"){#
+  	op <- getOption("show.error.messages")#
+ 	options(show.error.messages=FALSE)#
+    IV = try(ginv(vcv.sig2.product))#
+    options(show.error.messages=op)#
+#
+    if (class(IV) == "try-error"){#
+      return(-1E6)#
+    } else {#
+	  theta<-solve(t(D)%*%IV%*%D)%*%t(D)%*%IV%*%sim_values#
+	  if(return.anc){return(theta)} #
+      data.root.difference = (sim_values - (D%*%theta))#
+  	  log.det.product = logdet(vcv.sig2.product)#
+      log.likelihood = -0.5*(t(data.root.difference)%*%IV%*%data.root.difference) - 0.5*log.det.product - length(tree$tip.label)*length(root)*log(2*pi)*0.5#
+    }#
+  } else {#
+	theta<-solve(t(D)%*%IV%*%D)%*%t(D)%*%IV%*%sim_values#
+	if(return.anc){return(theta)} #
+    data.root.difference = (sim_values - (D%*%theta))#
+  	log.det.product = logdet(vcv.sig2.product)#
+    log.likelihood = -0.5*(t(data.root.difference)%*%IV%*%data.root.difference) - 0.5*log.det.product - length(tree$tip.label)*length(root)*log(2*pi)*0.5#
+  }#
+  return(log.likelihood)#
+}
+max_likelihood_BFGS = optim(#
+  par = c(sig2.1var,sig2.2var,0,0,0,0),#
+  fn = log_likelihood_mv_BM_DD,#
+  tree = tree,#
+  sim.value = sim.results,#
+  model = "BM",#
+  optim = TRUE,#
+  control = list(maxit = 2000, fnscale = -1),#
+  method = "BFGS"#
+)
+traceback()
+##setwd('D:/Documents/User/MBiol Project/Test/complete_sim_results')#
+#setwd('J:/My_Documents/Project/Simulation Study/Preliminary Simulation/complete_sim_results')#
+# source('Likelihood Test/PhenotypicModel.R') #from RPANDA (Marc Manceau)#
+# source('Likelihood Test/PhenotypicADiag.R') #from RPANDA (Marc Manceau)#
+# source('Likelihood Test/DDexp_nogeo_ADiag.R') #from RPANDA#
+# source('Likelihood Test/DDlin_nogeo_ADiag.R') #from RPANDA#
+log_likelihood_mv_BM_DD = function(#
+  tree,#
+  par = NULL, ##for optimisation, is a vector of all of the parameters [1:3] being the sig2 matrix, [4:6] being the slope#
+  sig2.matrix = NULL,#
+  slope.matrix = NULL,#
+  sim.value,#
+  model,#
+  optim = FALSE,#
+  return.anc = FALSE#
+){#
+  require(phytools)#
+  require(MASS)#
+  require(msos)#
+  no.taxa=length(sim.value)#
+if (optim){#
+    if (model=="DDexp"||model=="DDlin"){#
+    	sig2.matrix = matrix(c(exp(par[1]),par[3],par[3],exp(par[2])),ncol=2)#
+   		slope.matrix = matrix(c(par[4],par[6],par[6],par[5]),ncol=2)#
+  		test = sig2.matrix*exp(slope.matrix*50)#
+  		if(test[1,2]>test[1,1] || test[1,2]>test[2,2]){#
+ 			 return(-1E6)#
+  		}#
+    } else {#
+    	sig2.matrix = matrix(c(par[1],par[3],par[3],par[2]),ncol=2)#
+  		if(sig2.matrix[1,2]>sig2.matrix[1,1] || sig2.matrix[1,2]>sig2.matrix[2,2]){#
+ 			 return(-1E6)#
+  		}#
+    }#
+}#
+  if (!model %in% c("BM","DDexp","DDlin")){#
+    stop("model must be BM, DDexp or DDlin")#
+  }#
+#
+##there is an error here--what should this be? vector of 100? or #
+  sim_values = c()#
+  sorted.sim = sim.value[tree$tip.label]#
+  for (i in 1:dim(sig2.matrix)[1]){#
+    for (j in 1:length(tree$tip.label)){#
+      position = j+((i-1)*length(tree$tip.label))#
+      sim_values[position] = sorted.sim[[j]][i]#
+    }#
+  }#
+  if (model=="BM"){#
+    vcv.tree = vcv(tree)#
+    vcv.sig2.product = kronecker(sig2.matrix,vcv.tree)#
+  } else {#
+    if (model=="DDexp"){	#
+      dd.ob = createModel_DDexp(tree)#
+    } else if (model=="DDlin") {#
+      dd.ob = createModel_DDlin(tree)#
+    }#
+    sign.sig12 = sign(sig2.matrix[1,2])#
+    av.sig12 = abs(sig2.matrix[1,2])#
+    block1 = getTipDistribution(dd.ob,params=c(0,log(sqrt(sig2.matrix[1,1])),slope.matrix[1,1]))$Sigma#
+    block2 = getTipDistribution(dd.ob,params=c(0,log(sqrt(av.sig12)),slope.matrix[1,2]))$Sigma#
+    block3 = getTipDistribution(dd.ob,params=c(0,log(sqrt(av.sig12)),slope.matrix[2,1]))$Sigma#
+    block4 = getTipDistribution(dd.ob,params=c(0,log(sqrt(sig2.matrix[2,2])),slope.matrix[2,2]))$Sigma#
+    block2 = sign.sig12*block2#
+    block3 = sign.sig12*block3#
+    #compile blocks#
+    vcv.sig2.product = rbind(cbind(block1[tree$tip.label,tree$tip.label],block2[tree$tip.label,tree$tip.label]),cbind(block3[tree$tip.label,tree$tip.label],block4[tree$tip.label,tree$tip.label]))#
+  }#
+  D=kronecker(diag(2),matrix(1,ncol=1,nrow=length(tree$tip.label)))#
+#	IV=try(solve(V))#
+#  	options(show.error.messages=op)#
+#  if(class(IV)=="try-error"){#
+#    IV=corpcor::pseudoinverse(V)#
+#  	if(max(IV)==0){return(Inf)}#
+#  }#
+#	data<-as.matrix(data[rownames(V)])#
+#	I<-matrix(rep(1,length(phylo$tip.label)))#
+#	theta<-solve(t(I)%*%IV%*%I)%*%t(I)%*%IV%*%data[,1]#
+#	D<-(I%*%theta)-data[,1]#
+  #log.likelihood = -0.5*(t(data.root.difference)%*%ginv(vcv.sig2.product)%*%data.root.difference) - 0.5*log.det.product - length(tree$tip.label)*length(root)*log(2*pi)*0.5#
+#
+op <- getOption("show.error.messages")#
+options(show.error.messages=FALSE)#
+IV = try(chol2inv(chol(vcv.sig2.product)))  #
+options(show.error.messages=op)#
+#
+if (class(IV) == "try-error"){#
+  	op <- getOption("show.error.messages")#
+ 	options(show.error.messages=FALSE)#
+    IV = try(ginv(vcv.sig2.product))#
+    options(show.error.messages=op)#
+#
+    if (class(IV) == "try-error"){#
+      return(-1E6)#
+    } else {#
+	  theta<-solve(t(D)%*%IV%*%D)%*%t(D)%*%IV%*%sim_values#
+	  if(return.anc){return(theta)} #
+      data.root.difference = (sim_values - (D%*%theta))#
+  	  log.det.product = logdet(vcv.sig2.product)#
+      log.likelihood = -0.5*(t(data.root.difference)%*%IV%*%data.root.difference) - 0.5*log.det.product - length(tree$tip.label)*length(root)*log(2*pi)*0.5#
+    }#
+  } else {#
+	theta<-solve(t(D)%*%IV%*%D)%*%t(D)%*%IV%*%sim_values#
+	if(return.anc){return(theta)} #
+    data.root.difference = (sim_values - (D%*%theta))#
+  	log.det.product = logdet(vcv.sig2.product)#
+    log.likelihood = -0.5*(t(data.root.difference)%*%IV%*%data.root.difference) - 0.5*log.det.product - length(tree$tip.label)*length(root)*log(2*pi)*0.5#
+  }#
+  return(log.likelihood)#
+}
+max_likelihood_BFGS = optim(#
+  par = c(sig2.1var,sig2.2var,0,0,0,0),#
+  fn = log_likelihood_mv_BM_DD,#
+  tree = tree,#
+  sim.value = sim.results,#
+  model = "BM",#
+  optim = TRUE,#
+  control = list(maxit = 2000, fnscale = -1),#
+  method = "BFGS"#
+)
+max_likelihood_BFGS
+sig2.1var
+##setwd('D:/Documents/User/MBiol Project/Test/complete_sim_results')#
+#setwd('J:/My_Documents/Project/Simulation Study/Preliminary Simulation/complete_sim_results')#
+# source('Likelihood Test/PhenotypicModel.R') #from RPANDA (Marc Manceau)#
+# source('Likelihood Test/PhenotypicADiag.R') #from RPANDA (Marc Manceau)#
+# source('Likelihood Test/DDexp_nogeo_ADiag.R') #from RPANDA#
+# source('Likelihood Test/DDlin_nogeo_ADiag.R') #from RPANDA#
+log_likelihood_mv_BM_DD = function(#
+  tree,#
+  par = NULL, ##for optimisation, is a vector of all of the parameters [1:3] being the sig2 matrix, [4:6] being the slope#
+  sig2.matrix = NULL,#
+  slope.matrix = NULL,#
+  sim.value,#
+  model,#
+  optim = FALSE,#
+  return.anc = FALSE#
+){#
+  require(phytools)#
+  require(MASS)#
+  require(msos)#
+  no.taxa=length(sim.value)#
+if (optim){#
+    sig2.matrix = matrix(c(exp(par[1]),par[3],par[3],exp(par[2])),ncol=2)#
+    if (model=="DDexp"||model=="DDlin"){#
+   		slope.matrix = matrix(c(par[4],par[6],par[6],par[5]),ncol=2)#
+  		test = sig2.matrix*exp(slope.matrix*50)#
+  		if(test[1,2]>test[1,1] || test[1,2]>test[2,2]){#
+ 			 return(-1E6)#
+  		}#
+    } else {#
+  		if(sig2.matrix[1,2]>sig2.matrix[1,1] || sig2.matrix[1,2]>sig2.matrix[2,2]){#
+ 			 return(-1E6)#
+  		}#
+    }#
+}#
+  if (!model %in% c("BM","DDexp","DDlin")){#
+    stop("model must be BM, DDexp or DDlin")#
+  }#
+#
+##there is an error here--what should this be? vector of 100? or #
+  sim_values = c()#
+  sorted.sim = sim.value[tree$tip.label]#
+  for (i in 1:dim(sig2.matrix)[1]){#
+    for (j in 1:length(tree$tip.label)){#
+      position = j+((i-1)*length(tree$tip.label))#
+      sim_values[position] = sorted.sim[[j]][i]#
+    }#
+  }#
+  if (model=="BM"){#
+    vcv.tree = vcv(tree)#
+    vcv.sig2.product = kronecker(sig2.matrix,vcv.tree)#
+  } else {#
+    if (model=="DDexp"){	#
+      dd.ob = createModel_DDexp(tree)#
+    } else if (model=="DDlin") {#
+      dd.ob = createModel_DDlin(tree)#
+    }#
+    sign.sig12 = sign(sig2.matrix[1,2])#
+    av.sig12 = abs(sig2.matrix[1,2])#
+    block1 = getTipDistribution(dd.ob,params=c(0,log(sqrt(sig2.matrix[1,1])),slope.matrix[1,1]))$Sigma#
+    block2 = getTipDistribution(dd.ob,params=c(0,log(sqrt(av.sig12)),slope.matrix[1,2]))$Sigma#
+    block3 = getTipDistribution(dd.ob,params=c(0,log(sqrt(av.sig12)),slope.matrix[2,1]))$Sigma#
+    block4 = getTipDistribution(dd.ob,params=c(0,log(sqrt(sig2.matrix[2,2])),slope.matrix[2,2]))$Sigma#
+    block2 = sign.sig12*block2#
+    block3 = sign.sig12*block3#
+    #compile blocks#
+    vcv.sig2.product = rbind(cbind(block1[tree$tip.label,tree$tip.label],block2[tree$tip.label,tree$tip.label]),cbind(block3[tree$tip.label,tree$tip.label],block4[tree$tip.label,tree$tip.label]))#
+  }#
+  D=kronecker(diag(2),matrix(1,ncol=1,nrow=length(tree$tip.label)))#
+#	IV=try(solve(V))#
+#  	options(show.error.messages=op)#
+#  if(class(IV)=="try-error"){#
+#    IV=corpcor::pseudoinverse(V)#
+#  	if(max(IV)==0){return(Inf)}#
+#  }#
+#	data<-as.matrix(data[rownames(V)])#
+#	I<-matrix(rep(1,length(phylo$tip.label)))#
+#	theta<-solve(t(I)%*%IV%*%I)%*%t(I)%*%IV%*%data[,1]#
+#	D<-(I%*%theta)-data[,1]#
+  #log.likelihood = -0.5*(t(data.root.difference)%*%ginv(vcv.sig2.product)%*%data.root.difference) - 0.5*log.det.product - length(tree$tip.label)*length(root)*log(2*pi)*0.5#
+#
+op <- getOption("show.error.messages")#
+options(show.error.messages=FALSE)#
+IV = try(chol2inv(chol(vcv.sig2.product)))  #
+options(show.error.messages=op)#
+#
+if (class(IV) == "try-error"){#
+  	op <- getOption("show.error.messages")#
+ 	options(show.error.messages=FALSE)#
+    IV = try(ginv(vcv.sig2.product))#
+    options(show.error.messages=op)#
+#
+    if (class(IV) == "try-error"){#
+      return(-1E6)#
+    } else {#
+	  theta<-solve(t(D)%*%IV%*%D)%*%t(D)%*%IV%*%sim_values#
+	  if(return.anc){return(theta)} #
+      data.root.difference = (sim_values - (D%*%theta))#
+  	  log.det.product = logdet(vcv.sig2.product)#
+      log.likelihood = -0.5*(t(data.root.difference)%*%IV%*%data.root.difference) - 0.5*log.det.product - length(tree$tip.label)*length(root)*log(2*pi)*0.5#
+    }#
+  } else {#
+	theta<-solve(t(D)%*%IV%*%D)%*%t(D)%*%IV%*%sim_values#
+	if(return.anc){return(theta)} #
+    data.root.difference = (sim_values - (D%*%theta))#
+  	log.det.product = logdet(vcv.sig2.product)#
+    log.likelihood = -0.5*(t(data.root.difference)%*%IV%*%data.root.difference) - 0.5*log.det.product - length(tree$tip.label)*length(root)*log(2*pi)*0.5#
+  }#
+  return(log.likelihood)#
+}
+max_likelihood_BFGS = optim(#
+  par = c(sig2.1var,sig2.2var,0,0,0,0),#
+  fn = log_likelihood_mv_BM_DD,#
+  tree = tree,#
+  sim.value = sim.results,#
+  model = "BM",#
+  optim = TRUE,#
+  control = list(maxit = 2000, fnscale = -1),#
+  method = "BFGS"#
+)
+traceback()
+max_likelihood_BFGS = optim(#
+  par = c(sig2.1var,sig2.2var,0),#
+  fn = log_likelihood_mv_BM_DD,#
+  tree = tree,#
+  sim.value = sim.results,#
+  model = "BM",#
+  optim = TRUE,#
+  control = list(maxit = 2000, fnscale = -1),#
+  method = "BFGS"#
+)
+traceback()
+par=c(98.9486005269542, 157.333408159037, 0.167423241163879#
+   )
+exp(98)
+max_likelihood_BFGS = optim(#
+  par = c(sig2.1var,sig2.2var,0),#
+  fn = log_likelihood_mv_BM_DD,#
+  tree = tree,#
+  sim.value = sim.results,#
+  model = "BM",#
+  optim = TRUE,#
+  control = list(maxit = 2000, fnscale = -1),#
+  method = "Nelder-Mead"#
+)
+max_likelihood_BFGS
+exp(-3.21188069)
+sig2.value1
+exp(-1.83458385)
+tree = tree.list[[2]][[1]]#
+sig2 = sig2.matrices[[2]]#
+r.term = pars.list[[2]][[2]][[2]]#
+sim.results = DDexp_neg_sim_tree_50_root_sig2_2_tip_sig2_2_complete[[1]]#
+# trait.1 = c()#
+# trait.2 = c()#
+# for (m in 1:length(sim.results)){#
+#   trait.1 = c(trait.1,sim.results[[m]][1])#
+#   trait.2 = c(trait.2,sim.results[[m]][2])#
+# }#
+# #
+# #double check: does the following keep the traits in the right order?#
+# traits<-data.frame(trait.1,trait.2)#
+# rownames(traits)<- names(sim.results)#
+#
+traits = matrix(nrow=length(tree$tip.label),ncol=2)#
+for (j in 1:length(tree$tip.label)){#
+  traits[j,1] = sim.results[[j]][1]#
+  traits[j,2] = sim.results[[j]][2]#
+}#
+colnames(traits) = c("trait.1","trait.2")#
+rownames(traits) = names(sim.results)#
+##First off, fit data using mvMORPH#
+#
+fit = mvBM(tree,traits,model="BM1")#
+# LogLikelihood: 	 -53.09887
+require(mvMORPH)
+tree = tree.list[[2]][[1]]#
+sig2 = sig2.matrices[[2]]#
+r.term = pars.list[[2]][[2]][[2]]#
+sim.results = DDexp_neg_sim_tree_50_root_sig2_2_tip_sig2_2_complete[[1]]#
+# trait.1 = c()#
+# trait.2 = c()#
+# for (m in 1:length(sim.results)){#
+#   trait.1 = c(trait.1,sim.results[[m]][1])#
+#   trait.2 = c(trait.2,sim.results[[m]][2])#
+# }#
+# #
+# #double check: does the following keep the traits in the right order?#
+# traits<-data.frame(trait.1,trait.2)#
+# rownames(traits)<- names(sim.results)#
+#
+traits = matrix(nrow=length(tree$tip.label),ncol=2)#
+for (j in 1:length(tree$tip.label)){#
+  traits[j,1] = sim.results[[j]][1]#
+  traits[j,2] = sim.results[[j]][2]#
+}#
+colnames(traits) = c("trait.1","trait.2")#
+rownames(traits) = names(sim.results)#
+##First off, fit data using mvMORPH#
+#
+fit = mvBM(tree,traits,model="BM1")#
+# LogLikelihood: 	 -53.09887
+likelihood = log_likelihood_mv_BM_DD(#
+  tree = tree,#
+  sig2.matrix = fit$sigma,#
+  slope.matrix = matrix(rep(0,4),nrow=2),#
+  sim.value = sim.results,#
+  root = fit$theta,#
+  model = "BM"#
+)
+likelihood = log_likelihood_mv_BM_DD(#
+  tree = tree,#
+  sig2.matrix = fit$sigma,#
+  slope.matrix = matrix(rep(0,4),nrow=2),#
+  sim.value = sim.results,#
+  model = "BM"#
+)
+likelihood
+fit$sigma
+##setwd('D:/Documents/User/MBiol Project/Test/complete_sim_results')#
+#setwd('J:/My_Documents/Project/Simulation Study/Preliminary Simulation/complete_sim_results')#
+# source('Likelihood Test/PhenotypicModel.R') #from RPANDA (Marc Manceau)#
+# source('Likelihood Test/PhenotypicADiag.R') #from RPANDA (Marc Manceau)#
+# source('Likelihood Test/DDexp_nogeo_ADiag.R') #from RPANDA#
+# source('Likelihood Test/DDlin_nogeo_ADiag.R') #from RPANDA#
+log_likelihood_mv_BM_DD = function(#
+  tree,#
+  par = NULL, ##for optimisation, is a vector of all of the parameters [1:3] being the sig2 matrix, [4:5] being the root, [6:8] being the slope#
+  sig2.matrix = NULL,#
+  slope.matrix = NULL,#
+  root = NULL,#
+  sim.value,#
+  model,#
+  optim = FALSE#
+){#
+  require(phytools)#
+  require(MASS)#
+  require(msos)#
+  if (optim){#
+    sig2.matrix = matrix(c(exp(par[1]),par[3],par[3],exp(par[2])),ncol=2)#
+    root = par[4:5]#
+    if (model=="DDexp"||model=="DDlin"){#
+      slope.matrix = matrix(c(par[6],par[8],par[8],par[7]),ncol=2)#
+    }#
+  }#
+  if (!model %in% c("BM","DDexp","DDlin")){#
+    stop("model must be BM, DDexp or DDlin")#
+  }#
+#
+  sim_values = c()#
+  sorted.sim = sim.value[tree$tip.label]#
+  for (i in 1:length(root)){#
+    for (j in 1:length(tree$tip.label)){#
+      position = j+((i-1)*length(tree$tip.label))#
+      sim_values[position] = sorted.sim[[j]][i]#
+    }#
+  }#
+  if (model=="BM"){#
+    vcv.tree = vcv(tree)#
+    vcv.sig2.product = kronecker(sig2.matrix,vcv.tree)#
+  } else {#
+    if (model=="DDexp"){	#
+      dd.ob = createModel_DDexp(tree)#
+    } else if (model=="DDlin") {#
+      dd.ob = createModel_DDlin(tree)#
+    }#
+    sign.sig12 = sign(sig2.matrix[1,2])#
+    av.sig12 = abs(sig2.matrix[1,2])#
+    block1 = getTipDistribution(dd.ob,params=c(0,log(sqrt(sig2.matrix[1,1])),slope.matrix[1,1]))$Sigma#
+    block2 = getTipDistribution(dd.ob,params=c(0,log(sqrt(av.sig12)),slope.matrix[1,2]))$Sigma#
+    block3 = getTipDistribution(dd.ob,params=c(0,log(sqrt(av.sig12)),slope.matrix[2,1]))$Sigma#
+    block4 = getTipDistribution(dd.ob,params=c(0,log(sqrt(sig2.matrix[2,2])),slope.matrix[2,2]))$Sigma#
+    block2 = sign.sig12*block2#
+    block3 = sign.sig12*block3#
+    #compile blocks#
+    vcv.sig2.product = rbind(cbind(block1[tree$tip.label,tree$tip.label],block2[tree$tip.label,tree$tip.label]),cbind(block3[tree$tip.label,tree$tip.label],block4[tree$tip.label,tree$tip.label]))#
+  }#
+  D=kronecker(diag(2),matrix(1,ncol=1,nrow=length(tree$tip.label)))#
+  log.det.product = logdet(vcv.sig2.product)#
+  data.root.difference = (sim_values - (D%*%matrix(root)))#
+  #log.likelihood = -0.5*(t(data.root.difference)%*%ginv(vcv.sig2.product)%*%data.root.difference) - 0.5*log.det.product - length(tree$tip.label)*length(root)*log(2*pi)*0.5#
+  test = try(chol2inv(chol(vcv.sig2.product)))#
+  if (class(test) == "try-error"){#
+    test = try(ginv(vcv.sig2.product))#
+    if (class(test) == "try-error"){#
+      return(-1E6)#
+    } else {#
+      log.likelihood = -0.5*(t(data.root.difference)%*%ginv(vcv.sig2.product)%*%data.root.difference) - 0.5*log.det.product - length(tree$tip.label)*length(root)*log(2*pi)*0.5#
+    }#
+  } else {#
+    log.likelihood = -0.5*(t(data.root.difference)%*%chol2inv(chol(vcv.sig2.product))%*%data.root.difference) - 0.5*log.det.product - length(tree$tip.label)*length(root)*log(2*pi)*0.5#
+  }#
+  return(log.likelihood)#
+}
+likelihood = log_likelihood_mv_BM_DD(#
+  tree = tree,#
+  sig2.matrix = fit$sigma,#
+  slope.matrix = matrix(rep(0,4),nrow=2),#
+  sim.value = sim.results,#
+  model = "BM"#
+)
+likelihood
+likelihood = log_likelihood_mv_BM_DD(#
+  tree = tree,#
+  sig2.matrix = fit$sigma,#
+  slope.matrix = matrix(rep(0,4),nrow=2),#
+  sim.value = sim.results,#
+  root = fit$theta,#
+  model = "BM"#
+)
+likelihood
+root = fit$theta
+sig2.matrix = fit$sigma
+tree
+vcv.tree = vcv(tree)#
+    vcv.sig2.product = kronecker(sig2.matrix,vcv.tree)
+D=kronecker(diag(2),matrix(1,ncol=1,nrow=length(tree$tip.label)))#
+  log.det.product = logdet(vcv.sig2.product)#
+  data.root.difference = (sim_values - (D%*%matrix(root)))
+matrix(root))
+matrix(root)
+test = try(chol2inv(chol(vcv.sig2.product)))
+test
+test->IV
+D
+solve(t(D)%*%IV%*%D)%*%t(D)%*%IV%*%sim_values
+matrix(root)
+fit$sigma
+sim_values2 = c()#
+  sorted.sim = sim.value[tree$tip.label]#
+  for (i in 1:dim(sig2.matrix)[1]){#
+    for (j in 1:length(tree$tip.label)){#
+      position = j+((i-1)*length(tree$tip.label))#
+      sim_values2[position] = sorted.sim[[j]][i]#
+    }#
+  }
+root
+sim_values = c()#
+  sorted.sim = sim.value[tree$tip.label]#
+  for (i in 1:length(root)){#
+    for (j in 1:length(tree$tip.label)){#
+      position = j+((i-1)*length(tree$tip.label))#
+      sim_values[position] = sorted.sim[[j]][i]#
+    }#
+  }
+sim_values
+sim_values2
+##setwd('D:/Documents/User/MBiol Project/Test/complete_sim_results')#
+#setwd('J:/My_Documents/Project/Simulation Study/Preliminary Simulation/complete_sim_results')#
+# source('Likelihood Test/PhenotypicModel.R') #from RPANDA (Marc Manceau)#
+# source('Likelihood Test/PhenotypicADiag.R') #from RPANDA (Marc Manceau)#
+# source('Likelihood Test/DDexp_nogeo_ADiag.R') #from RPANDA#
+# source('Likelihood Test/DDlin_nogeo_ADiag.R') #from RPANDA#
+log_likelihood_mv_BM_DD_BETA = function(#
+  tree,#
+  par = NULL, ##for optimisation, is a vector of all of the parameters [1:3] being the sig2 matrix, [4:6] being the slope#
+  sig2.matrix = NULL,#
+  slope.matrix = NULL,#
+  sim.value,#
+  model,#
+  optim = FALSE,#
+  return.anc = FALSE#
+){#
+  require(phytools)#
+  require(MASS)#
+  require(msos)#
+if (optim){#
+    sig2.matrix = matrix(c(exp(par[1]),par[3],par[3],exp(par[2])),ncol=2)#
+    if (model=="DDexp"||model=="DDlin"){#
+   		slope.matrix = matrix(c(par[4],par[6],par[6],par[5]),ncol=2)#
+   		no.taxa=length(sim.value)#
+  		test = sig2.matrix*exp(slope.matrix*no.taxa)#
+  		if(test[1,2]>test[1,1] || test[1,2]>test[2,2]){#
+ 			 return(-1E6)#
+  		}#
+    } else {#
+  		if(sig2.matrix[1,2]>sig2.matrix[1,1] || sig2.matrix[1,2]>sig2.matrix[2,2]){#
+ 			 return(-1E6)#
+  		}#
+    }#
+}#
+  if (!model %in% c("BM","DDexp","DDlin")){#
+    stop("model must be BM, DDexp or DDlin")#
+  }#
+#
+##there is an error here--what should this be? vector of 100? or #
+  sim_values = c()#
+  sorted.sim = sim.value[tree$tip.label]#
+  for (i in 1:dim(sig2.matrix)[1]){#
+    for (j in 1:length(tree$tip.label)){#
+      position = j+((i-1)*length(tree$tip.label))#
+      sim_values[position] = sorted.sim[[j]][i]#
+    }#
+  }#
+  if (model=="BM"){#
+    vcv.tree = vcv(tree)#
+    vcv.sig2.product = kronecker(sig2.matrix,vcv.tree)#
+  } else {#
+    if (model=="DDexp"){	#
+      dd.ob = createModel_DDexp(tree)#
+    } else if (model=="DDlin") {#
+      dd.ob = createModel_DDlin(tree)#
+    }#
+    sign.sig12 = sign(sig2.matrix[1,2])#
+    av.sig12 = abs(sig2.matrix[1,2])#
+    block1 = getTipDistribution(dd.ob,params=c(0,log(sqrt(sig2.matrix[1,1])),slope.matrix[1,1]))$Sigma#
+    block2 = getTipDistribution(dd.ob,params=c(0,log(sqrt(av.sig12)),slope.matrix[1,2]))$Sigma#
+    block3 = getTipDistribution(dd.ob,params=c(0,log(sqrt(av.sig12)),slope.matrix[2,1]))$Sigma#
+    block4 = getTipDistribution(dd.ob,params=c(0,log(sqrt(sig2.matrix[2,2])),slope.matrix[2,2]))$Sigma#
+    block2 = sign.sig12*block2#
+    block3 = sign.sig12*block3#
+    #compile blocks#
+    vcv.sig2.product = rbind(cbind(block1[tree$tip.label,tree$tip.label],block2[tree$tip.label,tree$tip.label]),cbind(block3[tree$tip.label,tree$tip.label],block4[tree$tip.label,tree$tip.label]))#
+  }#
+  D=kronecker(diag(2),matrix(1,ncol=1,nrow=length(tree$tip.label)))#
+#	IV=try(solve(V))#
+#  	options(show.error.messages=op)#
+#  if(class(IV)=="try-error"){#
+#    IV=corpcor::pseudoinverse(V)#
+#  	if(max(IV)==0){return(Inf)}#
+#  }#
+#	data<-as.matrix(data[rownames(V)])#
+#	I<-matrix(rep(1,length(phylo$tip.label)))#
+#	theta<-solve(t(I)%*%IV%*%I)%*%t(I)%*%IV%*%data[,1]#
+#	D<-(I%*%theta)-data[,1]#
+  #log.likelihood = -0.5*(t(data.root.difference)%*%ginv(vcv.sig2.product)%*%data.root.difference) - 0.5*log.det.product - length(tree$tip.label)*length(root)*log(2*pi)*0.5#
+#
+op <- getOption("show.error.messages")#
+options(show.error.messages=FALSE)#
+IV = try(chol2inv(chol(vcv.sig2.product)))  #
+options(show.error.messages=op)#
+#
+if (class(IV) == "try-error"){#
+  	op <- getOption("show.error.messages")#
+ 	options(show.error.messages=FALSE)#
+    IV = try(ginv(vcv.sig2.product))#
+    options(show.error.messages=op)#
+#
+    if (class(IV) == "try-error"){#
+      return(-1E6)#
+    } else {#
+	  theta<-solve(t(D)%*%IV%*%D)%*%t(D)%*%IV%*%sim_values#
+	  if(return.anc){return(theta)} #
+      data.root.difference = (sim_values - (D%*%theta))#
+  	  log.det.product = logdet(vcv.sig2.product)#
+      log.likelihood = -0.5*(t(data.root.difference)%*%IV%*%data.root.difference) - 0.5*log.det.product - length(tree$tip.label)*length(root)*log(2*pi)*0.5#
+    }#
+  } else {#
+	theta<-solve(t(D)%*%IV%*%D)%*%t(D)%*%IV%*%sim_values#
+	if(return.anc){return(theta)} #
+    data.root.difference = (sim_values - (D%*%theta))#
+  	log.det.product = logdet(vcv.sig2.product)#
+    log.likelihood = -0.5*(t(data.root.difference)%*%IV%*%data.root.difference) - 0.5*log.det.product - length(tree$tip.label)*length(root)*log(2*pi)*0.5#
+  }#
+  return(log.likelihood)#
+}
+##setwd('D:/Documents/User/MBiol Project/Test/complete_sim_results')#
+#setwd('J:/My_Documents/Project/Simulation Study/Preliminary Simulation/complete_sim_results')#
+# source('Likelihood Test/PhenotypicModel.R') #from RPANDA (Marc Manceau)#
+# source('Likelihood Test/PhenotypicADiag.R') #from RPANDA (Marc Manceau)#
+# source('Likelihood Test/DDexp_nogeo_ADiag.R') #from RPANDA#
+# source('Likelihood Test/DDlin_nogeo_ADiag.R') #from RPANDA#
+log_likelihood_mv_BM_DD = function(#
+  tree,#
+  par = NULL, ##for optimisation, is a vector of all of the parameters [1:3] being the sig2 matrix, [4:5] being the root, [6:8] being the slope#
+  sig2.matrix = NULL,#
+  slope.matrix = NULL,#
+  root = NULL,#
+  sim.value,#
+  model,#
+  optim = FALSE#
+){#
+  require(phytools)#
+  require(MASS)#
+  require(msos)#
+  if (optim){#
+    sig2.matrix = matrix(c(exp(par[1]),par[3],par[3],exp(par[2])),ncol=2)#
+    root = par[4:5]#
+    if (model=="DDexp"||model=="DDlin"){#
+      slope.matrix = matrix(c(par[6],par[8],par[8],par[7]),ncol=2)#
+    }#
+  }#
+  if (!model %in% c("BM","DDexp","DDlin")){#
+    stop("model must be BM, DDexp or DDlin")#
+  }#
+#
+  sim_values = c()#
+  sorted.sim = sim.value[tree$tip.label]#
+  for (i in 1:length(root)){#
+    for (j in 1:length(tree$tip.label)){#
+      position = j+((i-1)*length(tree$tip.label))#
+      sim_values[position] = sorted.sim[[j]][i]#
+    }#
+  }#
+  if (model=="BM"){#
+    vcv.tree = vcv(tree)#
+    vcv.sig2.product = kronecker(sig2.matrix,vcv.tree)#
+  } else {#
+    if (model=="DDexp"){	#
+      dd.ob = createModel_DDexp(tree)#
+    } else if (model=="DDlin") {#
+      dd.ob = createModel_DDlin(tree)#
+    }#
+    sign.sig12 = sign(sig2.matrix[1,2])#
+    av.sig12 = abs(sig2.matrix[1,2])#
+    block1 = getTipDistribution(dd.ob,params=c(0,log(sqrt(sig2.matrix[1,1])),slope.matrix[1,1]))$Sigma#
+    block2 = getTipDistribution(dd.ob,params=c(0,log(sqrt(av.sig12)),slope.matrix[1,2]))$Sigma#
+    block3 = getTipDistribution(dd.ob,params=c(0,log(sqrt(av.sig12)),slope.matrix[2,1]))$Sigma#
+    block4 = getTipDistribution(dd.ob,params=c(0,log(sqrt(sig2.matrix[2,2])),slope.matrix[2,2]))$Sigma#
+    block2 = sign.sig12*block2#
+    block3 = sign.sig12*block3#
+    #compile blocks#
+    vcv.sig2.product = rbind(cbind(block1[tree$tip.label,tree$tip.label],block2[tree$tip.label,tree$tip.label]),cbind(block3[tree$tip.label,tree$tip.label],block4[tree$tip.label,tree$tip.label]))#
+  }#
+  D=kronecker(diag(2),matrix(1,ncol=1,nrow=length(tree$tip.label)))#
+  log.det.product = logdet(vcv.sig2.product)#
+  data.root.difference = (sim_values - (D%*%matrix(root)))#
+  #log.likelihood = -0.5*(t(data.root.difference)%*%ginv(vcv.sig2.product)%*%data.root.difference) - 0.5*log.det.product - length(tree$tip.label)*length(root)*log(2*pi)*0.5#
+  test = try(chol2inv(chol(vcv.sig2.product)))#
+  if (class(test) == "try-error"){#
+    test = try(ginv(vcv.sig2.product))#
+    if (class(test) == "try-error"){#
+      return(-1E6)#
+    } else {#
+      log.likelihood = -0.5*(t(data.root.difference)%*%ginv(vcv.sig2.product)%*%data.root.difference) - 0.5*log.det.product - length(tree$tip.label)*length(root)*log(2*pi)*0.5#
+    }#
+  } else {#
+    log.likelihood = -0.5*(t(data.root.difference)%*%chol2inv(chol(vcv.sig2.product))%*%data.root.difference) - 0.5*log.det.product - length(tree$tip.label)*length(root)*log(2*pi)*0.5#
+  }#
+  return(log.likelihood)#
+}
+likelihood = log_likelihood_mv_BM_DD(#
+  tree = tree,#
+  sig2.matrix = fit$sigma,#
+  slope.matrix = matrix(rep(0,4),nrow=2),#
+  sim.value = sim.results,#
+  root = fit$theta,#
+  model = "BM"#
+)
+likelihood
+likelihood = log_likelihood_mv_BM_DD_BETA(#
+  tree = tree,#
+  sig2.matrix = fit$sigma,#
+  slope.matrix = matrix(rep(0,4),nrow=2),#
+  sim.value = sim.results,#
+  model = "BM"#
+)
+likelihood
+log_likelihood_mv_BM_DD_BETA(#
+  tree = tree,#
+  sig2.matrix = fit$sigma,#
+  slope.matrix = matrix(rep(0,4),nrow=2),#
+  sim.value = sim.results,#
+  model = "BM"#
+)
+log_likelihood_mv_BM_DD_BETA(#
+  tree = tree,#
+  sig2.matrix = fit$sigma,#
+  slope.matrix = matrix(rep(0,4),nrow=2),#
+  sim.value = sim.results,#
+  model = "BM"#
+)
+likelihood = log_likelihood_mv_BM_DD(#
+  tree = tree,#
+  sig2.matrix = fit$sigma,#
+  slope.matrix = matrix(rep(0,4),nrow=2),#
+  sim.value = sim.results,#
+  root = fit$theta,#
+  model = "BM"#
+  return.anc=TRUE#
+)
+likelihood = log_likelihood_mv_BM_DD(#
+  tree = tree,#
+  sig2.matrix = fit$sigma,#
+  slope.matrix = matrix(rep(0,4),nrow=2),#
+  sim.value = sim.results,#
+  root = fit$theta,#
+  model = "BM",#
+  return.anc=TRUE#
+)
+likelihood = log_likelihood_mv_BM_DD_BETA(#
+  tree = tree,#
+  sig2.matrix = fit$sigma,#
+  slope.matrix = matrix(rep(0,4),nrow=2),#
+  sim.value = sim.results,#
+  model = "BM",#
+  return.anc=TRUE#
+)
+log_likelihood_mv_BM_DD_BETA(#
+  tree = tree,#
+  sig2.matrix = fit$sigma,#
+  slope.matrix = matrix(rep(0,4),nrow=2),#
+  sim.value = sim.results,#
+  model = "BM",#
+  return.anc=TRUE#
+)
+log_likelihood_mv_BM_DD_BETA(#
+  tree = tree,#
+  sig2.matrix = fit$sigma,#
+  slope.matrix = matrix(rep(0,4),nrow=2),#
+  sim.value = sim.results,#
+  model = "BM",#
+  return.anc=FALSE#
+)
+log_likelihood_mv_BM_DD_BETA(#
+  tree = tree,#
+  par = c(log(1),log(1),0)#
+  sig2.matrix = NULL,#
+  slope.matrix = NULL,#
+  sim.value = sim.results,#
+  model = "BM",#
+  return.anc=FALSE#
+)
+log_likelihood_mv_BM_DD_BETA(#
+  tree = tree,#
+  par = c(log(1),log(1),0),#
+  sig2.matrix = NULL,#
+  slope.matrix = NULL,#
+  sim.value = sim.results,#
+  model = "BM",#
+  return.anc=FALSE#
+)
+traceback()
+log_likelihood_mv_BM_DD_BETA(#
+  tree = tree,#
+  par = c(log(1),log(1),0),#
+  sig2.matrix = NULL,#
+  slope.matrix = NULL,#
+  sim.value = sim.results,#
+  model = "BM",#
+  return.anc=FALSE,#
+  optim=TRUE#
+)
+max_likelihood = optim(#
+  par = c(sig2.1var,sig2.2var,0),#
+  fn = log_likelihood_mv_BM_DD_BETA,#
+  tree = tree,#
+  sim.value = sim.results,#
+  model = "BM",#
+  optim = TRUE,#
+  control = list(maxit = 2000, fnscale = -1),#
+)
+max_likelihood
+max_likelihood = optim(#
+  par = c(sig2.1var,sig2.2var,0),#
+  fn = log_likelihood_mv_BM_DD_BETA,#
+  tree = tree,#
+  sim.value = sim.results,#
+  model = "BM",#
+  optim = TRUE,#
+  control = list(maxit = 2000, fnscale = -1, trace=2),#
+)
+traceback()
+log_likelihood_mv_BM_DD_BETA(#
+  tree = tree,#
+  par = max_likelihood$par,#
+  sig2.matrix = NULL,#
+  slope.matrix = NULL,#
+  sim.value = sim.results,#
+  model = "BM",#
+  return.anc=FALSE,#
+  optim=TRUE#
+)
+sig2.matrix = matrix(c(exp(par[1]),par[3],par[3],exp(par[2])),ncol=2)
+par= max_likelihood$par
+sig2.matrix = matrix(c(exp(par[1]),par[3],par[3],exp(par[2])),ncol=2)
+sig2.matrix
+##setwd('D:/Documents/User/MBiol Project/Test/complete_sim_results')#
+#setwd('J:/My_Documents/Project/Simulation Study/Preliminary Simulation/complete_sim_results')#
+# source('Likelihood Test/PhenotypicModel.R') #from RPANDA (Marc Manceau)#
+# source('Likelihood Test/PhenotypicADiag.R') #from RPANDA (Marc Manceau)#
+# source('Likelihood Test/DDexp_nogeo_ADiag.R') #from RPANDA#
+# source('Likelihood Test/DDlin_nogeo_ADiag.R') #from RPANDA#
+log_likelihood_mv_BM_DD_BETA = function(#
+  tree,#
+  par = NULL, ##for optimisation, is a vector of all of the parameters [1:3] being the sig2 matrix, [4:6] being the slope#
+  sig2.matrix = NULL,#
+  slope.matrix = NULL,#
+  sim.value,#
+  model,#
+  optim = FALSE,#
+  return.anc = FALSE#
+){#
+  require(phytools)#
+  require(MASS)#
+  require(msos)#
+if (optim){#
+    sig2.matrix = matrix(c(exp(par[1]),par[3],par[3],exp(par[2])),ncol=2)#
+    if (model=="DDexp"||model=="DDlin"){#
+   		slope.matrix = matrix(c(par[4],par[6],par[6],par[5]),ncol=2)#
+   		no.taxa=length(sim.value)#
+  		test = sig2.matrix*exp(slope.matrix*no.taxa)#
+  		if(test[1,2]>test[1,1] || test[1,2]>test[2,2]){#
+ 			 return(-1E6)#
+  		}#
+    } else {#
+  		if(abs(sig2.matrix[1,2])>sig2.matrix[1,1] || abs(sig2.matrix[1,2])>sig2.matrix[2,2]){#
+ 			 return(-1E6)#
+  		}#
+    }#
+}#
+  if (!model %in% c("BM","DDexp","DDlin")){#
+    stop("model must be BM, DDexp or DDlin")#
+  }#
+#
+##there is an error here--what should this be? vector of 100? or #
+  sim_values = c()#
+  sorted.sim = sim.value[tree$tip.label]#
+  for (i in 1:dim(sig2.matrix)[1]){#
+    for (j in 1:length(tree$tip.label)){#
+      position = j+((i-1)*length(tree$tip.label))#
+      sim_values[position] = sorted.sim[[j]][i]#
+    }#
+  }#
+  if (model=="BM"){#
+    vcv.tree = vcv(tree)#
+    vcv.sig2.product = kronecker(sig2.matrix,vcv.tree)#
+  } else {#
+    if (model=="DDexp"){	#
+      dd.ob = createModel_DDexp(tree)#
+    } else if (model=="DDlin") {#
+      dd.ob = createModel_DDlin(tree)#
+    }#
+    sign.sig12 = sign(sig2.matrix[1,2])#
+    av.sig12 = abs(sig2.matrix[1,2])#
+    block1 = getTipDistribution(dd.ob,params=c(0,log(sqrt(sig2.matrix[1,1])),slope.matrix[1,1]))$Sigma#
+    block2 = getTipDistribution(dd.ob,params=c(0,log(sqrt(av.sig12)),slope.matrix[1,2]))$Sigma#
+    block3 = getTipDistribution(dd.ob,params=c(0,log(sqrt(av.sig12)),slope.matrix[2,1]))$Sigma#
+    block4 = getTipDistribution(dd.ob,params=c(0,log(sqrt(sig2.matrix[2,2])),slope.matrix[2,2]))$Sigma#
+    block2 = sign.sig12*block2#
+    block3 = sign.sig12*block3#
+    #compile blocks#
+    vcv.sig2.product = rbind(cbind(block1[tree$tip.label,tree$tip.label],block2[tree$tip.label,tree$tip.label]),cbind(block3[tree$tip.label,tree$tip.label],block4[tree$tip.label,tree$tip.label]))#
+  }#
+  D=kronecker(diag(2),matrix(1,ncol=1,nrow=length(tree$tip.label)))#
+#	IV=try(solve(V))#
+#  	options(show.error.messages=op)#
+#  if(class(IV)=="try-error"){#
+#    IV=corpcor::pseudoinverse(V)#
+#  	if(max(IV)==0){return(Inf)}#
+#  }#
+#	data<-as.matrix(data[rownames(V)])#
+#	I<-matrix(rep(1,length(phylo$tip.label)))#
+#	theta<-solve(t(I)%*%IV%*%I)%*%t(I)%*%IV%*%data[,1]#
+#	D<-(I%*%theta)-data[,1]#
+  #log.likelihood = -0.5*(t(data.root.difference)%*%ginv(vcv.sig2.product)%*%data.root.difference) - 0.5*log.det.product - length(tree$tip.label)*length(root)*log(2*pi)*0.5#
+#
+op <- getOption("show.error.messages")#
+options(show.error.messages=FALSE)#
+IV = try(chol2inv(chol(vcv.sig2.product)))  #
+options(show.error.messages=op)#
+#
+if (class(IV) == "try-error"){#
+  	op <- getOption("show.error.messages")#
+ 	options(show.error.messages=FALSE)#
+    IV = try(ginv(vcv.sig2.product))#
+    options(show.error.messages=op)#
+#
+    if (class(IV) == "try-error"){#
+      return(-1E6)#
+    } else {#
+	  theta<-solve(t(D)%*%IV%*%D)%*%t(D)%*%IV%*%sim_values#
+	  if(return.anc){return(theta)} #
+      data.root.difference = (sim_values - (D%*%theta))#
+  	  log.det.product = logdet(vcv.sig2.product)#
+      log.likelihood = -0.5*(t(data.root.difference)%*%IV%*%data.root.difference) - 0.5*log.det.product - length(tree$tip.label)*length(root)*log(2*pi)*0.5#
+    }#
+  } else {#
+	theta<-solve(t(D)%*%IV%*%D)%*%t(D)%*%IV%*%sim_values#
+	if(return.anc){return(theta)} #
+    data.root.difference = (sim_values - (D%*%theta))#
+  	log.det.product = logdet(vcv.sig2.product)#
+    log.likelihood = -0.5*(t(data.root.difference)%*%IV%*%data.root.difference) - 0.5*log.det.product - length(tree$tip.label)*length(root)*log(2*pi)*0.5#
+  }#
+  return(log.likelihood)#
+}
+max_likelihood = optim(#
+  par = c(sig2.1var,sig2.2var,0),#
+  fn = log_likelihood_mv_BM_DD_BETA,#
+  tree = tree,#
+  sim.value = sim.results,#
+  model = "BM",#
+  optim = TRUE,#
+  control = list(maxit = 2000, fnscale = -1, trace=2),#
+)
+max_likelihood
+log_likelihood_mv_BM_DD_BETA(#
+  tree = tree,#
+  par = max_likelihood$par,#
+  sig2.matrix = NULL,#
+  slope.matrix = NULL,#
+  sim.value = sim.results,#
+  model = "BM",#
+  return.anc=TRUE,#
+  optim=TRUE#
+)
+fit
+max_likelihood = optim(#
+  par = c(sig2.1var,sig2.2var,0,0,0,0),#
+  fn = log_likelihood_mv_BM_DD_BETA,#
+  tree = tree,#
+  sim.value = sim.results,#
+  model = "DDexp",#
+  optim = TRUE,#
+  control = list(maxit = 2000, fnscale = -1, trace=2),#
+)#
+#
+log_likelihood_mv_BM_DD_BETA(#
+  tree = tree,#
+  par = max_likelihood$par,#
+  sig2.matrix = NULL,#
+  slope.matrix = NULL,#
+  sim.value = sim.results,#
+  model = "DDexp",#
+  return.anc=TRUE,#
+  optim=TRUE#
+)
+##setwd('D:/Documents/User/MBiol Project/Test/complete_sim_results')#
+#setwd('J:/My_Documents/Project/Simulation Study/Preliminary Simulation/complete_sim_results')#
+# source('Likelihood Test/PhenotypicModel.R') #from RPANDA (Marc Manceau)#
+# source('Likelihood Test/PhenotypicADiag.R') #from RPANDA (Marc Manceau)#
+# source('Likelihood Test/DDexp_nogeo_ADiag.R') #from RPANDA#
+# source('Likelihood Test/DDlin_nogeo_ADiag.R') #from RPANDA#
+log_likelihood_mv_BM_DD_BETA = function(#
+  tree,#
+  par = NULL, ##for optimisation, is a vector of all of the parameters [1:3] being the sig2 matrix, [4:6] being the slope#
+  sig2.matrix = NULL,#
+  slope.matrix = NULL,#
+  sim.value,#
+  model,#
+  optim = FALSE,#
+  return.anc = FALSE#
+){#
+  require(phytools)#
+  require(MASS)#
+  require(msos)#
+if (optim){#
+    sig2.matrix = matrix(c(exp(par[1]),par[3],par[3],exp(par[2])),ncol=2)#
+    if (model=="DDexp"||model=="DDlin"){#
+   		slope.matrix = matrix(c(par[4],par[6],par[6],par[5]),ncol=2)#
+   		no.taxa=length(sim.value)#
+  		test = sig2.matrix*exp(slope.matrix*no.taxa)#
+  		if(abs(test[1,2])>test[1,1] || abs(test[1,2])>test[2,2]){#
+ 			 return(-1E6)#
+  		}#
+    } else {#
+  		if(abs(sig2.matrix[1,2])>sig2.matrix[1,1] || abs(sig2.matrix[1,2])>sig2.matrix[2,2]){#
+ 			 return(-1E6)#
+  		}#
+    }#
+}#
+  if (!model %in% c("BM","DDexp","DDlin")){#
+    stop("model must be BM, DDexp or DDlin")#
+  }#
+#
+##there is an error here--what should this be? vector of 100? or #
+  sim_values = c()#
+  sorted.sim = sim.value[tree$tip.label]#
+  for (i in 1:dim(sig2.matrix)[1]){#
+    for (j in 1:length(tree$tip.label)){#
+      position = j+((i-1)*length(tree$tip.label))#
+      sim_values[position] = sorted.sim[[j]][i]#
+    }#
+  }#
+  if (model=="BM"){#
+    vcv.tree = vcv(tree)#
+    vcv.sig2.product = kronecker(sig2.matrix,vcv.tree)#
+  } else {#
+    if (model=="DDexp"){	#
+      dd.ob = createModel_DDexp(tree)#
+    } else if (model=="DDlin") {#
+      dd.ob = createModel_DDlin(tree)#
+    }#
+    sign.sig12 = sign(sig2.matrix[1,2])#
+    av.sig12 = abs(sig2.matrix[1,2])#
+    block1 = getTipDistribution(dd.ob,params=c(0,log(sqrt(sig2.matrix[1,1])),slope.matrix[1,1]))$Sigma#
+    block2 = getTipDistribution(dd.ob,params=c(0,log(sqrt(av.sig12)),slope.matrix[1,2]))$Sigma#
+    block3 = getTipDistribution(dd.ob,params=c(0,log(sqrt(av.sig12)),slope.matrix[2,1]))$Sigma#
+    block4 = getTipDistribution(dd.ob,params=c(0,log(sqrt(sig2.matrix[2,2])),slope.matrix[2,2]))$Sigma#
+    block2 = sign.sig12*block2#
+    block3 = sign.sig12*block3#
+    #compile blocks#
+    vcv.sig2.product = rbind(cbind(block1[tree$tip.label,tree$tip.label],block2[tree$tip.label,tree$tip.label]),cbind(block3[tree$tip.label,tree$tip.label],block4[tree$tip.label,tree$tip.label]))#
+  }#
+  D=kronecker(diag(2),matrix(1,ncol=1,nrow=length(tree$tip.label)))#
+#	IV=try(solve(V))#
+#  	options(show.error.messages=op)#
+#  if(class(IV)=="try-error"){#
+#    IV=corpcor::pseudoinverse(V)#
+#  	if(max(IV)==0){return(Inf)}#
+#  }#
+#	data<-as.matrix(data[rownames(V)])#
+#	I<-matrix(rep(1,length(phylo$tip.label)))#
+#	theta<-solve(t(I)%*%IV%*%I)%*%t(I)%*%IV%*%data[,1]#
+#	D<-(I%*%theta)-data[,1]#
+  #log.likelihood = -0.5*(t(data.root.difference)%*%ginv(vcv.sig2.product)%*%data.root.difference) - 0.5*log.det.product - length(tree$tip.label)*length(root)*log(2*pi)*0.5#
+#
+op <- getOption("show.error.messages")#
+options(show.error.messages=FALSE)#
+IV = try(chol2inv(chol(vcv.sig2.product)))  #
+options(show.error.messages=op)#
+#
+if (class(IV) == "try-error"){#
+  	op <- getOption("show.error.messages")#
+ 	options(show.error.messages=FALSE)#
+    IV = try(ginv(vcv.sig2.product))#
+    options(show.error.messages=op)#
+#
+    if (class(IV) == "try-error"){#
+      return(-1E6)#
+    } else {#
+	  theta<-solve(t(D)%*%IV%*%D)%*%t(D)%*%IV%*%sim_values#
+	  if(return.anc){return(theta)} #
+      data.root.difference = (sim_values - (D%*%theta))#
+  	  log.det.product = logdet(vcv.sig2.product)#
+      log.likelihood = -0.5*(t(data.root.difference)%*%IV%*%data.root.difference) - 0.5*log.det.product - length(tree$tip.label)*length(root)*log(2*pi)*0.5#
+    }#
+  } else {#
+	theta<-solve(t(D)%*%IV%*%D)%*%t(D)%*%IV%*%sim_values#
+	if(return.anc){return(theta)} #
+    data.root.difference = (sim_values - (D%*%theta))#
+  	log.det.product = logdet(vcv.sig2.product)#
+    log.likelihood = -0.5*(t(data.root.difference)%*%IV%*%data.root.difference) - 0.5*log.det.product - length(tree$tip.label)*length(root)*log(2*pi)*0.5#
+  }#
+  return(log.likelihood)#
+}
+max_likelihood = optim(#
+  par = c(sig2.1var,sig2.2var,0,0,0,0),#
+  fn = log_likelihood_mv_BM_DD_BETA,#
+  tree = tree,#
+  sim.value = sim.results,#
+  model = "DDexp",#
+  optim = TRUE,#
+  control = list(maxit = 2000, fnscale = -1, trace=2),#
+)#
+#
+log_likelihood_mv_BM_DD_BETA(#
+  tree = tree,#
+  par = max_likelihood$par,#
+  sig2.matrix = NULL,#
+  slope.matrix = NULL,#
+  sim.value = sim.results,#
+  model = "DDexp",#
+  return.anc=TRUE,#
+  optim=TRUE#
+)
+max_likelihood
+exp( -4.23669127)
+exp(-4.98834581)
+exp(-4.98834581)*exp(0.05022842)
+exp(-4.98834581)*exp(0.05022842*1)
+exp(-4.98834581)*exp(0.05022842*50)
+par = max_likelihood$par
+sig2.matrix = matrix(c(exp(par[1]),par[3],par[3],exp(par[2])),ncol=2)
+sig2.matrix
+slope.matrix = matrix(c(par[4],par[6],par[6],par[5]),ncol=2)
+slope.matrix
+test = sig2.matrix*exp(slope.matrix*no.taxa)
+test
+dd.ob
+str(dd.ob)
+dd.ob@name
+##setwd('D:/Documents/User/MBiol Project/Test/complete_sim_results')#
+#setwd('J:/My_Documents/Project/Simulation Study/Preliminary Simulation/complete_sim_results')#
+# source('Likelihood Test/PhenotypicModel.R') #from RPANDA (Marc Manceau)#
+# source('Likelihood Test/PhenotypicADiag.R') #from RPANDA (Marc Manceau)#
+# source('Likelihood Test/DDexp_nogeo_ADiag.R') #from RPANDA#
+# source('Likelihood Test/DDlin_nogeo_ADiag.R') #from RPANDA#
+log_likelihood_mv_BM_DD_BETA = function(#
+  tree,#
+  par = NULL, ##for optimisation, is a vector of all of the parameters [1:3] being the sig2 matrix, [4:6] being the slope#
+  sig2.matrix = NULL,#
+  slope.matrix = NULL,#
+  dd.ob = NULL#
+  sim.value,#
+  model,#
+  optim = FALSE,#
+  return.anc = FALSE#
+){#
+  require(phytools)#
+  require(MASS)#
+  require(msos)#
+if (optim){#
+    sig2.matrix = matrix(c(exp(par[1]),par[3],par[3],exp(par[2])),ncol=2)#
+    if (model=="DDexp"||model=="DDlin"){#
+   		slope.matrix = matrix(c(par[4],par[6],par[6],par[5]),ncol=2)#
+   		no.taxa=length(sim.value)#
+  		test = sig2.matrix*exp(slope.matrix*no.taxa)#
+  		if(abs(test[1,2])>test[1,1] || abs(test[1,2])>test[2,2]){#
+ 			 return(-1E6)#
+  		}#
+    } else {#
+  		if(abs(sig2.matrix[1,2])>sig2.matrix[1,1] || abs(sig2.matrix[1,2])>sig2.matrix[2,2]){#
+ 			 return(-1E6)#
+  		}#
+    }#
+}#
+  if (!model %in% c("BM","DDexp","DDlin")){#
+    stop("model must be BM, DDexp or DDlin")#
+  }#
+#
+##there is an error here--what should this be? vector of 100? or #
+  sim_values = c()#
+  sorted.sim = sim.value[tree$tip.label]#
+  for (i in 1:dim(sig2.matrix)[1]){#
+    for (j in 1:length(tree$tip.label)){#
+      position = j+((i-1)*length(tree$tip.label))#
+      sim_values[position] = sorted.sim[[j]][i]#
+    }#
+  }#
+  if (model=="BM"){#
+    vcv.tree = vcv(tree)#
+    vcv.sig2.product = kronecker(sig2.matrix,vcv.tree)#
+  } else {#
+  if(dd.ob@name!=model){stop("dd.ob is built for incorrect model")}    #
+    sign.sig12 = sign(sig2.matrix[1,2])#
+    av.sig12 = abs(sig2.matrix[1,2])#
+    block1 = getTipDistribution(dd.ob,params=c(0,log(sqrt(sig2.matrix[1,1])),slope.matrix[1,1]))$Sigma#
+    block2 = getTipDistribution(dd.ob,params=c(0,log(sqrt(av.sig12)),slope.matrix[1,2]))$Sigma#
+    block3 = getTipDistribution(dd.ob,params=c(0,log(sqrt(av.sig12)),slope.matrix[2,1]))$Sigma#
+    block4 = getTipDistribution(dd.ob,params=c(0,log(sqrt(sig2.matrix[2,2])),slope.matrix[2,2]))$Sigma#
+    block2 = sign.sig12*block2#
+    block3 = sign.sig12*block3#
+    #compile blocks#
+    vcv.sig2.product = rbind(cbind(block1[tree$tip.label,tree$tip.label],block2[tree$tip.label,tree$tip.label]),cbind(block3[tree$tip.label,tree$tip.label],block4[tree$tip.label,tree$tip.label]))#
+  }#
+D=kronecker(diag(2),matrix(1,ncol=1,nrow=length(tree$tip.label)))#
+op <- getOption("show.error.messages")#
+options(show.error.messages=FALSE)#
+IV = try(chol2inv(chol(vcv.sig2.product)))  #
+options(show.error.messages=op)#
+#
+if (class(IV) == "try-error"){#
+  	op <- getOption("show.error.messages")#
+ 	options(show.error.messages=FALSE)#
+    IV = try(ginv(vcv.sig2.product))#
+    options(show.error.messages=op)#
+#
+    if (class(IV) == "try-error"){#
+      return(-1E6)#
+    } else {#
+	  theta<-solve(t(D)%*%IV%*%D)%*%t(D)%*%IV%*%sim_values#
+	  if(return.anc){return(theta)} #
+      data.root.difference = (sim_values - (D%*%theta))#
+  	  log.det.product = logdet(vcv.sig2.product)#
+      log.likelihood = -0.5*(t(data.root.difference)%*%IV%*%data.root.difference) - 0.5*log.det.product - length(tree$tip.label)*length(root)*log(2*pi)*0.5#
+    }#
+  } else {#
+	theta<-solve(t(D)%*%IV%*%D)%*%t(D)%*%IV%*%sim_values#
+	if(return.anc){return(theta)} #
+    data.root.difference = (sim_values - (D%*%theta))#
+  	log.det.product = logdet(vcv.sig2.product)#
+    log.likelihood = -0.5*(t(data.root.difference)%*%IV%*%data.root.difference) - 0.5*log.det.product - length(tree$tip.label)*length(root)*log(2*pi)*0.5#
+  }#
+  return(log.likelihood)#
+}
+##setwd('D:/Documents/User/MBiol Project/Test/complete_sim_results')#
+#setwd('J:/My_Documents/Project/Simulation Study/Preliminary Simulation/complete_sim_results')#
+# source('Likelihood Test/PhenotypicModel.R') #from RPANDA (Marc Manceau)#
+# source('Likelihood Test/PhenotypicADiag.R') #from RPANDA (Marc Manceau)#
+# source('Likelihood Test/DDexp_nogeo_ADiag.R') #from RPANDA#
+# source('Likelihood Test/DDlin_nogeo_ADiag.R') #from RPANDA#
+log_likelihood_mv_BM_DD_BETA = function(#
+  tree,#
+  par = NULL, ##for optimisation, is a vector of all of the parameters [1:3] being the sig2 matrix, [4:6] being the slope#
+  sig2.matrix = NULL,#
+  slope.matrix = NULL,#
+  dd.ob = NULL,#
+  sim.value,#
+  model,#
+  optim = FALSE,#
+  return.anc = FALSE#
+){#
+  require(phytools)#
+  require(MASS)#
+  require(msos)#
+if (optim){#
+    sig2.matrix = matrix(c(exp(par[1]),par[3],par[3],exp(par[2])),ncol=2)#
+    if (model=="DDexp"||model=="DDlin"){#
+   		slope.matrix = matrix(c(par[4],par[6],par[6],par[5]),ncol=2)#
+   		no.taxa=length(sim.value)#
+  		test = sig2.matrix*exp(slope.matrix*no.taxa)#
+  		if(abs(test[1,2])>test[1,1] || abs(test[1,2])>test[2,2]){#
+ 			 return(-1E6)#
+  		}#
+    } else {#
+  		if(abs(sig2.matrix[1,2])>sig2.matrix[1,1] || abs(sig2.matrix[1,2])>sig2.matrix[2,2]){#
+ 			 return(-1E6)#
+  		}#
+    }#
+}#
+  if (!model %in% c("BM","DDexp","DDlin")){#
+    stop("model must be BM, DDexp or DDlin")#
+  }#
+#
+##there is an error here--what should this be? vector of 100? or #
+  sim_values = c()#
+  sorted.sim = sim.value[tree$tip.label]#
+  for (i in 1:dim(sig2.matrix)[1]){#
+    for (j in 1:length(tree$tip.label)){#
+      position = j+((i-1)*length(tree$tip.label))#
+      sim_values[position] = sorted.sim[[j]][i]#
+    }#
+  }#
+  if (model=="BM"){#
+    vcv.tree = vcv(tree)#
+    vcv.sig2.product = kronecker(sig2.matrix,vcv.tree)#
+  } else {#
+  if(dd.ob@name!=model){stop("dd.ob is built for incorrect model")}    #
+    sign.sig12 = sign(sig2.matrix[1,2])#
+    av.sig12 = abs(sig2.matrix[1,2])#
+    block1 = getTipDistribution(dd.ob,params=c(0,log(sqrt(sig2.matrix[1,1])),slope.matrix[1,1]))$Sigma#
+    block2 = getTipDistribution(dd.ob,params=c(0,log(sqrt(av.sig12)),slope.matrix[1,2]))$Sigma#
+    block3 = getTipDistribution(dd.ob,params=c(0,log(sqrt(av.sig12)),slope.matrix[2,1]))$Sigma#
+    block4 = getTipDistribution(dd.ob,params=c(0,log(sqrt(sig2.matrix[2,2])),slope.matrix[2,2]))$Sigma#
+    block2 = sign.sig12*block2#
+    block3 = sign.sig12*block3#
+    #compile blocks#
+    vcv.sig2.product = rbind(cbind(block1[tree$tip.label,tree$tip.label],block2[tree$tip.label,tree$tip.label]),cbind(block3[tree$tip.label,tree$tip.label],block4[tree$tip.label,tree$tip.label]))#
+  }#
+D=kronecker(diag(2),matrix(1,ncol=1,nrow=length(tree$tip.label)))#
+op <- getOption("show.error.messages")#
+options(show.error.messages=FALSE)#
+IV = try(chol2inv(chol(vcv.sig2.product)))  #
+options(show.error.messages=op)#
+#
+if (class(IV) == "try-error"){#
+  	op <- getOption("show.error.messages")#
+ 	options(show.error.messages=FALSE)#
+    IV = try(ginv(vcv.sig2.product))#
+    options(show.error.messages=op)#
+#
+    if (class(IV) == "try-error"){#
+      return(-1E6)#
+    } else {#
+	  theta<-solve(t(D)%*%IV%*%D)%*%t(D)%*%IV%*%sim_values#
+	  if(return.anc){return(theta)} #
+      data.root.difference = (sim_values - (D%*%theta))#
+  	  log.det.product = logdet(vcv.sig2.product)#
+      log.likelihood = -0.5*(t(data.root.difference)%*%IV%*%data.root.difference) - 0.5*log.det.product - length(tree$tip.label)*length(root)*log(2*pi)*0.5#
+    }#
+  } else {#
+	theta<-solve(t(D)%*%IV%*%D)%*%t(D)%*%IV%*%sim_values#
+	if(return.anc){return(theta)} #
+    data.root.difference = (sim_values - (D%*%theta))#
+  	log.det.product = logdet(vcv.sig2.product)#
+    log.likelihood = -0.5*(t(data.root.difference)%*%IV%*%data.root.difference) - 0.5*log.det.product - length(tree$tip.label)*length(root)*log(2*pi)*0.5#
+  }#
+  return(log.likelihood)#
+}
+dd.ob = createModel_DDexp(tree)#
+#
+max_likelihood = optim(#
+  par = c(sig2.1var,sig2.2var,0,0,0,0),#
+  fn = log_likelihood_mv_BM_DD_BETA,#
+  tree = tree,#
+  sim.value = sim.results,#
+  dd.ob = dd.ob#
+  model = "DDexp",#
+  optim = TRUE,#
+  control = list(maxit = 2000, fnscale = -1, trace=2),#
+)
+dd.ob = createModel_DDexp(tree)#
+#
+max_likelihood = optim(#
+  par = c(sig2.1var,sig2.2var,0,0,0,0),#
+  fn = log_likelihood_mv_BM_DD_BETA,#
+  tree = tree,#
+  sim.value = sim.results,#
+  dd.ob = dd.ob,#
+  model = "DDexp",#
+  optim = TRUE,#
+  control = list(maxit = 2000, fnscale = -1, trace=2),#
+)
+max_likelihood
+max_likelihood = optim(#
+  par = c(sig2.1var,sig2.2var,0,0,0,0),#
+  fn = log_likelihood_mv_BM_DD_BETA,#
+  tree = tree,#
+  sim.value = sim.results,#
+  dd.ob = dd.ob,#
+  model = "DDexp",#
+  optim = TRUE,#
+  method = "BFGS",#
+  control = list(maxit = 2000, fnscale = -1, trace=2),#
+)
+max_likelihood = optim(#
+  par = c(sig2.1var,sig2.2var,0,0,0,0),#
+  fn = log_likelihood_mv_BM_DD_BETA,#
+  tree = tree,#
+  sim.value = sim.results,#
+  dd.ob = dd.ob,#
+  model = "DDexp",#
+  optim = TRUE,#
+  method = "L-BFGS-B",#
+  control = list(maxit = 2000, fnscale = -1, trace=2),#
+)
+max_likelihood
+##setwd('D:/Documents/User/MBiol Project/Test/complete_sim_results')#
+#setwd('J:/My_Documents/Project/Simulation Study/Preliminary Simulation/complete_sim_results')#
+# source('Likelihood Test/PhenotypicModel.R') #from RPANDA (Marc Manceau)#
+# source('Likelihood Test/PhenotypicADiag.R') #from RPANDA (Marc Manceau)#
+# source('Likelihood Test/DDexp_nogeo_ADiag.R') #from RPANDA#
+# source('Likelihood Test/DDlin_nogeo_ADiag.R') #from RPANDA#
+log_likelihood_mv_BM_DD_BETA= function(#
+  tree,#
+  par = NULL, ##for optimisation, is a vector of all of the parameters [1:2] being the sig2 values, [3:5] being the slope#
+  sig2.matrix = NULL,#
+  slope.matrix = NULL,#
+  dd.ob = NULL,#
+  sim.value,#
+  model,#
+  optim = FALSE,#
+  return.anc = FALSE#
+){#
+  require(phytools)#
+  require(MASS)#
+  require(msos)#
+if (optim){#
+    sig2.matrix = matrix(c(exp(par[1]),1,1,exp(par[2])),ncol=2)#
+    if (model=="DDexp"||model=="DDlin"){#
+   		slope.matrix = matrix(c(par[3],par[5],par[5],par[4]),ncol=2)#
+   		no.taxa=length(sim.value)#
+  		test = sig2.matrix*exp(slope.matrix*no.taxa)#
+  		if(abs(test[1,2])>test[1,1] || abs(test[1,2])>test[2,2]){#
+ 			 return(-1E6)#
+  		}#
+    } else {#
+  		if(abs(sig2.matrix[1,2])>sig2.matrix[1,1] || abs(sig2.matrix[1,2])>sig2.matrix[2,2]){#
+ 			 return(-1E6)#
+  		}#
+    }#
+}#
+  if (!model %in% c("BM","DDexp","DDlin")){#
+    stop("model must be BM, DDexp or DDlin")#
+  }#
+#
+##there is an error here--what should this be? vector of 100? or #
+  sim_values = c()#
+  sorted.sim = sim.value[tree$tip.label]#
+  for (i in 1:dim(sig2.matrix)[1]){#
+    for (j in 1:length(tree$tip.label)){#
+      position = j+((i-1)*length(tree$tip.label))#
+      sim_values[position] = sorted.sim[[j]][i]#
+    }#
+  }#
+  if (model=="BM"){#
+    vcv.tree = vcv(tree)#
+    vcv.sig2.product = kronecker(sig2.matrix,vcv.tree)#
+  } else {#
+  if(dd.ob@name!=model){stop("dd.ob is built for incorrect model")}    #
+    sign.sig12 = sign(sig2.matrix[1,2])#
+    av.sig12 = abs(sig2.matrix[1,2])#
+    block1 = getTipDistribution(dd.ob,params=c(0,log(sqrt(sig2.matrix[1,1])),slope.matrix[1,1]))$Sigma#
+    block2 = getTipDistribution(dd.ob,params=c(0,log(sqrt(av.sig12)),slope.matrix[1,2]))$Sigma#
+    block3 = getTipDistribution(dd.ob,params=c(0,log(sqrt(av.sig12)),slope.matrix[2,1]))$Sigma#
+    block4 = getTipDistribution(dd.ob,params=c(0,log(sqrt(sig2.matrix[2,2])),slope.matrix[2,2]))$Sigma#
+    block2 = sign.sig12*block2#
+    block3 = sign.sig12*block3#
+    #compile blocks#
+    vcv.sig2.product = rbind(cbind(block1[tree$tip.label,tree$tip.label],block2[tree$tip.label,tree$tip.label]),cbind(block3[tree$tip.label,tree$tip.label],block4[tree$tip.label,tree$tip.label]))#
+  }#
+D=kronecker(diag(2),matrix(1,ncol=1,nrow=length(tree$tip.label)))#
+op <- getOption("show.error.messages")#
+options(show.error.messages=FALSE)#
+IV = try(chol2inv(chol(vcv.sig2.product)))  #
+options(show.error.messages=op)#
+#
+if (class(IV) == "try-error"){#
+  	op <- getOption("show.error.messages")#
+ 	options(show.error.messages=FALSE)#
+    IV = try(ginv(vcv.sig2.product))#
+    options(show.error.messages=op)#
+#
+    if (class(IV) == "try-error"){#
+      return(-1E6)#
+    } else {#
+	  theta<-solve(t(D)%*%IV%*%D)%*%t(D)%*%IV%*%sim_values#
+	  if(return.anc){return(theta)} #
+      data.root.difference = (sim_values - (D%*%theta))#
+  	  log.det.product = logdet(vcv.sig2.product)#
+      log.likelihood = -0.5*(t(data.root.difference)%*%IV%*%data.root.difference) - 0.5*log.det.product - length(tree$tip.label)*length(root)*log(2*pi)*0.5#
+    }#
+  } else {#
+	theta<-solve(t(D)%*%IV%*%D)%*%t(D)%*%IV%*%sim_values#
+	if(return.anc){return(theta)} #
+    data.root.difference = (sim_values - (D%*%theta))#
+  	log.det.product = logdet(vcv.sig2.product)#
+    log.likelihood = -0.5*(t(data.root.difference)%*%IV%*%data.root.difference) - 0.5*log.det.product - length(tree$tip.label)*length(root)*log(2*pi)*0.5#
+  }#
+  return(log.likelihood)#
+}
+max_likelihood = optim(#
+  par = c(sig2.1var,sig2.2var,0,0,0),#
+  fn = log_likelihood_mv_BM_DD_BETA,#
+  tree = tree,#
+  sim.value = sim.results,#
+  dd.ob = dd.ob,#
+  model = "DDexp",#
+  optim = TRUE,#
+  method = "Nelder-Mead",#
+  control = list(maxit = 2000, fnscale = -1, trace=2),#
+)
+max_likelihood
+par = c(sig2.1var,sig2.2var,0,0,0)
+sig2.matrix = matrix(c(exp(par[1]),1,1,exp(par[2])),ncol=2)
+sig2.matrix
+slope.matrix = matrix(c(par[3],par[5],par[5],par[4]),ncol=2)
+test = sig2.matrix*exp(slope.matrix*no.taxa)
+test
+##setwd('D:/Documents/User/MBiol Project/Test/complete_sim_results')#
+#setwd('J:/My_Documents/Project/Simulation Study/Preliminary Simulation/complete_sim_results')#
+# source('Likelihood Test/PhenotypicModel.R') #from RPANDA (Marc Manceau)#
+# source('Likelihood Test/PhenotypicADiag.R') #from RPANDA (Marc Manceau)#
+# source('Likelihood Test/DDexp_nogeo_ADiag.R') #from RPANDA#
+# source('Likelihood Test/DDlin_nogeo_ADiag.R') #from RPANDA#
+log_likelihood_mv_BM_DD_BETA= function(#
+  tree,#
+  par = NULL, ##for optimisation, is a vector of all of the parameters [1:3] being the sig2 values, [4:5] being the slope#
+  sig2.matrix = NULL,#
+  slope.matrix = NULL,#
+  dd.ob = NULL,#
+  sim.value,#
+  model,#
+  optim = FALSE,#
+  return.anc = FALSE#
+){#
+  require(phytools)#
+  require(MASS)#
+  require(msos)#
+if (optim){#
+    sig2.matrix = matrix(c(exp(par[1]),par[3],par[3],exp(par[2])),ncol=2)#
+    if (model=="DDexp"||model=="DDlin"){#
+   		slope.matrix = matrix(c(par[4],0,0,par[5]),ncol=2)#
+   		no.taxa=length(sim.value)#
+  		test = sig2.matrix*exp(slope.matrix*no.taxa)#
+  		if(abs(test[1,2])>test[1,1] || abs(test[1,2])>test[2,2]){#
+ 			 return(-1E6)#
+  		}#
+    } else {#
+  		if(abs(sig2.matrix[1,2])>sig2.matrix[1,1] || abs(sig2.matrix[1,2])>sig2.matrix[2,2]){#
+ 			 return(-1E6)#
+  		}#
+    }#
+}#
+  if (!model %in% c("BM","DDexp","DDlin")){#
+    stop("model must be BM, DDexp or DDlin")#
+  }#
+#
+##there is an error here--what should this be? vector of 100? or #
+  sim_values = c()#
+  sorted.sim = sim.value[tree$tip.label]#
+  for (i in 1:dim(sig2.matrix)[1]){#
+    for (j in 1:length(tree$tip.label)){#
+      position = j+((i-1)*length(tree$tip.label))#
+      sim_values[position] = sorted.sim[[j]][i]#
+    }#
+  }#
+  if (model=="BM"){#
+    vcv.tree = vcv(tree)#
+    vcv.sig2.product = kronecker(sig2.matrix,vcv.tree)#
+  } else {#
+  if(dd.ob@name!=model){stop("dd.ob is built for incorrect model")}    #
+    sign.sig12 = sign(sig2.matrix[1,2])#
+    av.sig12 = abs(sig2.matrix[1,2])#
+    block1 = getTipDistribution(dd.ob,params=c(0,log(sqrt(sig2.matrix[1,1])),slope.matrix[1,1]))$Sigma#
+    block2 = getTipDistribution(dd.ob,params=c(0,log(sqrt(av.sig12)),slope.matrix[1,2]))$Sigma#
+    block3 = getTipDistribution(dd.ob,params=c(0,log(sqrt(av.sig12)),slope.matrix[2,1]))$Sigma#
+    block4 = getTipDistribution(dd.ob,params=c(0,log(sqrt(sig2.matrix[2,2])),slope.matrix[2,2]))$Sigma#
+    block2 = sign.sig12*block2#
+    block3 = sign.sig12*block3#
+    #compile blocks#
+    vcv.sig2.product = rbind(cbind(block1[tree$tip.label,tree$tip.label],block2[tree$tip.label,tree$tip.label]),cbind(block3[tree$tip.label,tree$tip.label],block4[tree$tip.label,tree$tip.label]))#
+  }#
+D=kronecker(diag(2),matrix(1,ncol=1,nrow=length(tree$tip.label)))#
+op <- getOption("show.error.messages")#
+options(show.error.messages=FALSE)#
+IV = try(chol2inv(chol(vcv.sig2.product)))  #
+options(show.error.messages=op)#
+#
+if (class(IV) == "try-error"){#
+  	op <- getOption("show.error.messages")#
+ 	options(show.error.messages=FALSE)#
+    IV = try(ginv(vcv.sig2.product))#
+    options(show.error.messages=op)#
+#
+    if (class(IV) == "try-error"){#
+      return(-1E6)#
+    } else {#
+	  theta<-solve(t(D)%*%IV%*%D)%*%t(D)%*%IV%*%sim_values#
+	  if(return.anc){return(theta)} #
+      data.root.difference = (sim_values - (D%*%theta))#
+  	  log.det.product = logdet(vcv.sig2.product)#
+      log.likelihood = -0.5*(t(data.root.difference)%*%IV%*%data.root.difference) - 0.5*log.det.product - length(tree$tip.label)*length(root)*log(2*pi)*0.5#
+    }#
+  } else {#
+	theta<-solve(t(D)%*%IV%*%D)%*%t(D)%*%IV%*%sim_values#
+	if(return.anc){return(theta)} #
+    data.root.difference = (sim_values - (D%*%theta))#
+  	log.det.product = logdet(vcv.sig2.product)#
+    log.likelihood = -0.5*(t(data.root.difference)%*%IV%*%data.root.difference) - 0.5*log.det.product - length(tree$tip.label)*length(root)*log(2*pi)*0.5#
+  }#
+  return(log.likelihood)#
+}
+max_likelihood = optim(#
+  par = c(sig2.1var,sig2.2var,0,0,0),#
+  fn = log_likelihood_mv_BM_DD_BETA,#
+  tree = tree,#
+  sim.value = sim.results,#
+  dd.ob = dd.ob,#
+  model = "DDexp",#
+  optim = TRUE,#
+  method = "Nelder-Mead",#
+  control = list(maxit = 2000, fnscale = -1, trace=2),#
+)
+traceback()
+c(-4.14225652863994, -3.73533685815195, -0.0313165155065217, #
+   0.0462641939067611, 0.0749902617992605)
+pars=c(-4.14225652863994, -3.73533685815195, -0.0313165155065217, #
+   0.0462641939067611, 0.0749902617992605)
+par=c(-4.14225652863994, -3.73533685815195, -0.0313165155065217, #
+   0.0462641939067611, 0.0749902617992605)
+sig2.matrix = matrix(c(exp(par[1]),par[3],par[3],exp(par[2])),ncol=2)
+slope.matrix = matrix(c(par[4],0,0,par[5]),ncol=2)#
+   		no.taxa=length(sim.value)#
+  		test = sig2.matrix*exp(slope.matrix*no.taxa)
+test
+sim_values = c()#
+  sorted.sim = sim.value[tree$tip.label]#
+  for (i in 1:dim(sig2.matrix)[1]){#
+    for (j in 1:length(tree$tip.label)){#
+      position = j+((i-1)*length(tree$tip.label))#
+      sim_values[position] = sorted.sim[[j]][i]#
+    }#
+  }
+dd.ob
+sign.sig12 = sign(sig2.matrix[1,2])#
+    av.sig12 = abs(sig2.matrix[1,2])#
+    block1 = getTipDistribution(dd.ob,params=c(0,log(sqrt(sig2.matrix[1,1])),slope.matrix[1,1]))$Sigma#
+    block2 = getTipDistribution(dd.ob,params=c(0,log(sqrt(av.sig12)),slope.matrix[1,2]))$Sigma#
+    block3 = getTipDistribution(dd.ob,params=c(0,log(sqrt(av.sig12)),slope.matrix[2,1]))$Sigma#
+    block4 = getTipDistribution(dd.ob,params=c(0,log(sqrt(sig2.matrix[2,2])),slope.matrix[2,2]))$Sigma#
+    block2 = sign.sig12*block2#
+    block3 = sign.sig12*block3#
+    #compile blocks#
+    vcv.sig2.product = rbind(cbind(block1[tree$tip.label,tree$tip.label],block2[tree$tip.label,tree$tip.label]),cbind(block3[tree$tip.label,tree$tip.label],block4[tree$tip.label,tree$tip.label]))
+D=kronecker(diag(2),matrix(1,ncol=1,nrow=length(tree$tip.label)))#
+op <- getOption("show.error.messages")#
+options(show.error.messages=FALSE)#
+IV = try(chol2inv(chol(vcv.sig2.product)))  #
+options(show.error.messages=op)
+class(IV)
+theta<-solve(t(D)%*%IV%*%D)%*%t(D)%*%IV%*%sim_values
+theta
+if(return.anc){return(theta)} #
+      data.root.difference = (sim_values - (D%*%theta))#
+  	  log.det.product = logdet(vcv.sig2.product)#
+      log.likelihood = -0.5*(t(data.root.difference)%*%IV%*%data.root.difference) - 0.5*log.det.product - length(tree$tip.label)*length(root)*log(2*pi)*0.5
+log.likelihood
+sig2.matrix
+block1 = getTipDistribution(dd.ob,params=c(0,log(sqrt(sig2.matrix[1,1])),slope.matrix[1,1]))$Sigma#
+    block2 = getTipDistribution(dd.ob,params=c(0,log(sqrt(av.sig12)),slope.matrix[1,2]))$Sigma#
+    block3 = getTipDistribution(dd.ob,params=c(0,log(sqrt(av.sig12)),slope.matrix[2,1]))$Sigma#
+    block4 = getTipDistribution(dd.ob,params=c(0,log(sqrt(sig2.matrix[2,2])),slope.matrix[2,2]))$Sigma#
+    block2 = sign.sig12*block2#
+    block3 = sign.sig12*block3
+block2
+slope.matrix[1,2]
+slope.matrix
+block2 = getTipDistribution(dd.ob,params=c(0,log(sqrt(av.sig12)),slope.matrix[1,2]))$Sigma
+system.time(    block2 = getTipDistribution(dd.ob,params=c(0,log(sqrt(av.sig12)),slope.matrix[1,2]))$Sigma#
+)
+system.time(     getTipDistribution(dd.ob,params=c(0,log(sqrt(av.sig12)),slope.matrix[1,2]))$Sigma#
+)
+system.time(sqrt(av.sig12)*vcv(tree))
+system.time(sqrt(av.sig12)*vcv(tree))
+system.time(sqrt(av.sig12)*vcv(tree))
+system.time(av.sig12*vcv(tree))
+##setwd('D:/Documents/User/MBiol Project/Test/complete_sim_results')#
+#setwd('J:/My_Documents/Project/Simulation Study/Preliminary Simulation/complete_sim_results')#
+# source('Likelihood Test/PhenotypicModel.R') #from RPANDA (Marc Manceau)#
+# source('Likelihood Test/PhenotypicADiag.R') #from RPANDA (Marc Manceau)#
+# source('Likelihood Test/DDexp_nogeo_ADiag.R') #from RPANDA#
+# source('Likelihood Test/DDlin_nogeo_ADiag.R') #from RPANDA#
+log_likelihood_mv_BM_DD_BETA= function(#
+  tree,#
+  par = NULL, ##for optimisation, is a vector of all of the parameters [1:3] being the sig2 values, [4:5] being the slope#
+  sig2.matrix = NULL,#
+  slope.matrix = NULL,#
+  dd.ob = NULL,#
+  sim.value,#
+  model,#
+  optim = FALSE,#
+  return.anc = FALSE#
+){#
+  require(phytools)#
+  require(MASS)#
+  require(msos)#
+if (!model %in% c("BM","DDexp","DDlin")){#
+    stop("model must be BM, DDexp or DDlin")#
+  }#
+if (optim){#
+    sig2.matrix = matrix(c(exp(par[1]),par[3],par[3],exp(par[2])),ncol=2)#
+    if (model=="DDexp"||model=="DDlin"){#
+   		slope.matrix = matrix(c(par[4],0,0,par[5]),ncol=2)#
+   		no.taxa=length(sim.value)#
+  		test = sig2.matrix*exp(slope.matrix*no.taxa)#
+  		if(abs(test[1,2])>test[1,1] || abs(test[1,2])>test[2,2]){#
+ 			 return(-1E6)#
+  		}#
+    } else {#
+  		if(abs(sig2.matrix[1,2])>sig2.matrix[1,1] || abs(sig2.matrix[1,2])>sig2.matrix[2,2]){#
+ 			 return(-1E6)#
+  		}#
+    }#
+}#
+ sim_values = c()#
+  sorted.sim = sim.value[tree$tip.label]#
+  for (i in 1:dim(sig2.matrix)[1]){#
+    for (j in 1:length(tree$tip.label)){#
+      position = j+((i-1)*length(tree$tip.label))#
+      sim_values[position] = sorted.sim[[j]][i]#
+    }#
+  }#
+  if (model=="BM"){#
+    vcv.tree = vcv(tree)#
+    vcv.sig2.product = kronecker(sig2.matrix,vcv.tree)#
+  } else {#
+  if(dd.ob@name!=model){stop("dd.ob is built for incorrect model")}    #
+    sign.sig12 = sign(sig2.matrix[1,2])#
+    av.sig12 = abs(sig2.matrix[1,2])#
+    block1 = getTipDistribution(dd.ob,params=c(0,log(sqrt(sig2.matrix[1,1])),slope.matrix[1,1]))$Sigma#
+    block2_3 = av.sig12*vcv(tree)#
+    block4 = getTipDistribution(dd.ob,params=c(0,log(sqrt(sig2.matrix[2,2])),slope.matrix[2,2]))$Sigma#
+    block2_3 = sign.sig12*block2_3#
+    #compile blocks#
+    vcv.sig2.product = rbind(cbind(block1[tree$tip.label,tree$tip.label],block2_3[tree$tip.label,tree$tip.label]),cbind(block2_3[tree$tip.label,tree$tip.label],block4[tree$tip.label,tree$tip.label]))#
+  }#
+D=kronecker(diag(2),matrix(1,ncol=1,nrow=length(tree$tip.label)))#
+op <- getOption("show.error.messages")#
+options(show.error.messages=FALSE)#
+IV = try(chol2inv(chol(vcv.sig2.product)))  #
+options(show.error.messages=op)#
+#
+if (class(IV) == "try-error"){#
+  	op <- getOption("show.error.messages")#
+ 	options(show.error.messages=FALSE)#
+    IV = try(ginv(vcv.sig2.product))#
+    options(show.error.messages=op)#
+#
+    if (class(IV) == "try-error"){#
+      return(-1E6)#
+    } else {#
+	  theta<-solve(t(D)%*%IV%*%D)%*%t(D)%*%IV%*%sim_values#
+	  if(return.anc){return(theta)} #
+      data.root.difference = (sim_values - (D%*%theta))#
+  	  log.det.product = logdet(vcv.sig2.product)#
+      log.likelihood = -0.5*(t(data.root.difference)%*%IV%*%data.root.difference) - 0.5*log.det.product - length(tree$tip.label)*length(root)*log(2*pi)*0.5#
+    }#
+  } else {#
+	theta<-solve(t(D)%*%IV%*%D)%*%t(D)%*%IV%*%sim_values#
+	if(return.anc){return(theta)} #
+    data.root.difference = (sim_values - (D%*%theta))#
+  	log.det.product = logdet(vcv.sig2.product)#
+    log.likelihood = -0.5*(t(data.root.difference)%*%IV%*%data.root.difference) - 0.5*log.det.product - length(tree$tip.label)*length(root)*log(2*pi)*0.5#
+  }#
+  return(log.likelihood)#
+}
+max_likelihood = optim(#
+  par = c(sig2.1var,sig2.2var,0,0,0),#
+  fn = log_likelihood_mv_BM_DD_BETA,#
+  tree = tree,#
+  sim.value = sim.results,#
+  dd.ob = dd.ob,#
+  model = "DDexp",#
+  optim = TRUE,#
+  method = "BFGS",#
+  control = list(maxit = 2000, fnscale = -1, trace=2),#
+)
+traceback()
+par=c(-3.24398674048567, -2.07081548221314, 0.0873860353878399, #
+   2.35861570662971, 4.26070279991689
+)
+par
+model
+sig2.matrix = matrix(c(exp(par[1]),par[3],par[3],exp(par[2])),ncol=2)#
+    if (model=="DDexp"||model=="DDlin"){#
+   		slope.matrix = matrix(c(par[4],0,0,par[5]),ncol=2)#
+   		no.taxa=length(sim.value)#
+  		test = sig2.matrix*exp(slope.matrix*no.taxa)#
+  		if(abs(test[1,2])>test[1,1] || abs(test[1,2])>test[2,2]){#
+ 			 return(-1E6)#
+  		}#
+    } else {#
+  		if(abs(sig2.matrix[1,2])>sig2.matrix[1,1] || abs(sig2.matrix[1,2])>sig2.matrix[2,2]){#
+ 			 return(-1E6)#
+  		}#
+    }
+sig2.matrix
+slope.matrix
+sim_values = c()#
+  sorted.sim = sim.value[tree$tip.label]#
+  for (i in 1:dim(sig2.matrix)[1]){#
+    for (j in 1:length(tree$tip.label)){#
+      position = j+((i-1)*length(tree$tip.label))#
+      sim_values[position] = sorted.sim[[j]][i]#
+    }#
+  }#
+  if (model=="BM"){#
+    vcv.tree = vcv(tree)#
+    vcv.sig2.product = kronecker(sig2.matrix,vcv.tree)#
+  } else {#
+  if(dd.ob@name!=model){stop("dd.ob is built for incorrect model")}    #
+    sign.sig12 = sign(sig2.matrix[1,2])#
+    av.sig12 = abs(sig2.matrix[1,2])#
+    block1 = getTipDistribution(dd.ob,params=c(0,log(sqrt(sig2.matrix[1,1])),slope.matrix[1,1]))$Sigma#
+    block2_3 = av.sig12*vcv(tree)#
+    block4 = getTipDistribution(dd.ob,params=c(0,log(sqrt(sig2.matrix[2,2])),slope.matrix[2,2]))$Sigma#
+    block2_3 = sign.sig12*block2_3#
+    #compile blocks#
+    vcv.sig2.product = rbind(cbind(block1[tree$tip.label,tree$tip.label],block2_3[tree$tip.label,tree$tip.label]),cbind(block2_3[tree$tip.label,tree$tip.label],block4[tree$tip.label,tree$tip.label]))#
+  }#
+D=kronecker(diag(2),matrix(1,ncol=1,nrow=length(tree$tip.label)))#
+op <- getOption("show.error.messages")#
+options(show.error.messages=FALSE)#
+IV = try(chol2inv(chol(vcv.sig2.product)))  #
+options(show.error.messages=op)#
+#
+if (class(IV) == "try-error"){#
+  	op <- getOption("show.error.messages")#
+ 	options(show.error.messages=FALSE)#
+    IV = try(ginv(vcv.sig2.product))#
+    options(show.error.messages=op)#
+#
+    if (class(IV) == "try-error"){#
+      return(-1E6)#
+    } else {#
+	  theta<-solve(t(D)%*%IV%*%D)%*%t(D)%*%IV%*%sim_values#
+	  if(return.anc){return(theta)} #
+      data.root.difference = (sim_values - (D%*%theta))#
+  	  log.det.product = logdet(vcv.sig2.product)#
+      log.likelihood = -0.5*(t(data.root.difference)%*%IV%*%data.root.difference) - 0.5*log.det.product - length(tree$tip.label)*length(root)*log(2*pi)*0.5#
+    }#
+  } else {#
+	theta<-solve(t(D)%*%IV%*%D)%*%t(D)%*%IV%*%sim_values#
+	if(return.anc){return(theta)} #
+    data.root.difference = (sim_values - (D%*%theta))#
+  	log.det.product = logdet(vcv.sig2.product)#
+    log.likelihood = -0.5*(t(data.root.difference)%*%IV%*%data.root.difference) - 0.5*log.det.product - length(tree$tip.label)*length(root)*log(2*pi)*0.5#
+  }#
+  return(log.likelihood)
+class(IV)
+IV
+dim(IV)
+tree
+sim_values = c()#
+  sorted.sim = sim.value[tree$tip.label]#
+  for (i in 1:dim(sig2.matrix)[1]){#
+    for (j in 1:length(tree$tip.label)){#
+      position = j+((i-1)*length(tree$tip.label))#
+      sim_values[position] = sorted.sim[[j]][i]#
+    }#
+  }#
+  if (model=="BM"){#
+    vcv.tree = vcv(tree)#
+    vcv.sig2.product = kronecker(sig2.matrix,vcv.tree)#
+  } else {#
+  if(dd.ob@name!=model){stop("dd.ob is built for incorrect model")}    #
+    sign.sig12 = sign(sig2.matrix[1,2])#
+    av.sig12 = abs(sig2.matrix[1,2])#
+    block1 = getTipDistribution(dd.ob,params=c(0,log(sqrt(sig2.matrix[1,1])),slope.matrix[1,1]))$Sigma#
+    block2_3 = av.sig12*vcv(tree)#
+    block4 = getTipDistribution(dd.ob,params=c(0,log(sqrt(sig2.matrix[2,2])),slope.matrix[2,2]))$Sigma#
+    block2_3 = sign.sig12*block2_3#
+    #compile blocks#
+    vcv.sig2.product = rbind(cbind(block1[tree$tip.label,tree$tip.label],block2_3[tree$tip.label,tree$tip.label]),cbind(block2_3[tree$tip.label,tree$tip.label],block4[tree$tip.label,tree$tip.label]))#
+  }#
+D=kronecker(diag(2),matrix(1,ncol=1,nrow=length(tree$tip.label)))#
+op <- getOption("show.error.messages")#
+options(show.error.messages=FALSE)#
+IV = try(chol2inv(chol(vcv.sig2.product)))  #
+options(show.error.messages=op)#
+#
+if (class(IV) == "try-error"){#
+  	op <- getOption("show.error.messages")#
+ 	options(show.error.messages=FALSE)#
+    IV = try(ginv(vcv.sig2.product))#
+    options(show.error.messages=op)#
+#
+    if (class(IV) == "try-error"){#
+      return(-1E6)#
+    } else {#
+	  theta<-solve(t(D)%*%IV%*%D)%*%t(D)%*%IV%*%sim_values#
+	  if(return.anc){return(theta)} #
+      data.root.difference = (sim_values - (D%*%theta))#
+  	  log.det.product = logdet(vcv.sig2.product)#
+      log.likelihood = -0.5*(t(data.root.difference)%*%IV%*%data.root.difference) - 0.5*log.det.product - length(tree$tip.label)*length(root)*log(2*pi)*0.5#
+    }#
+  } else {#
+	theta<-solve(t(D)%*%IV%*%D)%*%t(D)%*%IV%*%sim_values#
+	if(return.anc){return(theta)} #
+    data.root.difference = (sim_values - (D%*%theta))#
+  	log.det.product = logdet(vcv.sig2.product)#
+    log.likelihood = -0.5*(t(data.root.difference)%*%IV%*%data.root.difference) - 0.5*log.det.product - length(tree$tip.label)*length(root)*log(2*pi)*0.5#
+  }#
+  return(log.likelihood)
+D
+solve(t(D)%*%IV%*%D)%*%t(D)
+psuedoinverse((t(D)%*%IV%*%D)%*%t(D)
+psuedoinverse(t(D)%*%IV%*%D)%*%t(D)
+require(corpcor)
+psuedoinverse(t(D)%*%IV%*%D)%*%t(D)
+psuedoinv(t(D)%*%IV%*%D)%*%t(D)
+pseudoinverse(t(D)%*%IV%*%D)%*%t(D)
+t(D)
+##setwd('D:/Documents/User/MBiol Project/Test/complete_sim_results')#
+#setwd('J:/My_Documents/Project/Simulation Study/Preliminary Simulation/complete_sim_results')#
+# source('Likelihood Test/PhenotypicModel.R') #from RPANDA (Marc Manceau)#
+# source('Likelihood Test/PhenotypicADiag.R') #from RPANDA (Marc Manceau)#
+# source('Likelihood Test/DDexp_nogeo_ADiag.R') #from RPANDA#
+# source('Likelihood Test/DDlin_nogeo_ADiag.R') #from RPANDA#
+log_likelihood_mv_BM_DD_BETA= function(#
+  tree,#
+  par = NULL, ##for optimisation, is a vector of all of the parameters [1:3] being the sig2 values, [4:5] being the slope#
+  sig2.matrix = NULL,#
+  slope.matrix = NULL,#
+  dd.ob = NULL,#
+  sim.value,#
+  model,#
+  optim = FALSE,#
+  return.anc = FALSE#
+){#
+  require(phytools)#
+  require(MASS)#
+  require(msos)#
+if (!model %in% c("BM","DDexp","DDlin")){#
+    stop("model must be BM, DDexp or DDlin")#
+  }#
+if (optim){#
+    sig2.matrix = matrix(c(exp(par[1]),par[3],par[3],exp(par[2])),ncol=2)#
+    if (model=="DDexp"||model=="DDlin"){#
+   		slope.matrix = matrix(c(par[4],0,0,par[5]),ncol=2)#
+   		no.taxa=length(sim.value)#
+  		test = sig2.matrix*exp(slope.matrix*no.taxa)#
+  		if(abs(test[1,2])>test[1,1] || abs(test[1,2])>test[2,2]){#
+ 			 return(-1E6)#
+  		}#
+    } else {#
+  		if(abs(sig2.matrix[1,2])>sig2.matrix[1,1] || abs(sig2.matrix[1,2])>sig2.matrix[2,2]){#
+ 			 return(-1E6)#
+  		}#
+    }#
+}#
+ sim_values = c()#
+  sorted.sim = sim.value[tree$tip.label]#
+  for (i in 1:dim(sig2.matrix)[1]){#
+    for (j in 1:length(tree$tip.label)){#
+      position = j+((i-1)*length(tree$tip.label))#
+      sim_values[position] = sorted.sim[[j]][i]#
+    }#
+  }#
+  if (model=="BM"){#
+    vcv.tree = vcv(tree)#
+    vcv.sig2.product = kronecker(sig2.matrix,vcv.tree)#
+  } else {#
+  if(dd.ob@name!=model){stop("dd.ob is built for incorrect model")}    #
+    sign.sig12 = sign(sig2.matrix[1,2])#
+    av.sig12 = abs(sig2.matrix[1,2])#
+    block1 = getTipDistribution(dd.ob,params=c(0,log(sqrt(sig2.matrix[1,1])),slope.matrix[1,1]))$Sigma#
+    block2_3 = av.sig12*vcv(tree)#
+    block4 = getTipDistribution(dd.ob,params=c(0,log(sqrt(sig2.matrix[2,2])),slope.matrix[2,2]))$Sigma#
+    block2_3 = sign.sig12*block2_3#
+    #compile blocks#
+    vcv.sig2.product = rbind(cbind(block1[tree$tip.label,tree$tip.label],block2_3[tree$tip.label,tree$tip.label]),cbind(block2_3[tree$tip.label,tree$tip.label],block4[tree$tip.label,tree$tip.label]))#
+  }#
+D=kronecker(diag(2),matrix(1,ncol=1,nrow=length(tree$tip.label)))#
+op <- getOption("show.error.messages")#
+options(show.error.messages=FALSE)#
+IV = try(chol2inv(chol(vcv.sig2.product)))  #
+options(show.error.messages=op)#
+#
+if (class(IV) == "try-error"){#
+  	op <- getOption("show.error.messages")#
+ 	options(show.error.messages=FALSE)#
+    IV = try(ginv(vcv.sig2.product))#
+    options(show.error.messages=op)#
+#
+    if (class(IV) == "try-error"){#
+      return(-1E6)#
+    } else {#
+  		op <- getOption("show.error.messages")#
+ 		options(show.error.messages=FALSE)#
+		theta<-try(solve(t(D)%*%IV%*%D)%*%t(D)%*%IV%*%sim_values)#
+    	options(show.error.messages=op)#
+    	if(class(theta)=="try-error"){#
+			theta<-corpcor::pseudoinverse(t(D)%*%IV%*%D)%*%t(D)%*%IV%*%sim_values#
+    	}#
+		if(return.anc){return(theta)} #
+      	data.root.difference = (sim_values - (D%*%theta))#
+  	  	log.det.product = logdet(vcv.sig2.product)#
+      	log.likelihood = -0.5*(t(data.root.difference)%*%IV%*%data.root.difference) - 0.5*log.det.product - length(tree$tip.label)*length(root)*log(2*pi)*0.5#
+    }#
+  } else {#
+  	op <- getOption("show.error.messages")#
+ 	options(show.error.messages=FALSE)#
+	theta<-try(solve(t(D)%*%IV%*%D)%*%t(D)%*%IV%*%sim_values)#
+    options(show.error.messages=op)#
+    if(class(theta)=="try-error"){#
+		theta<-corpcor::pseudoinverse(t(D)%*%IV%*%D)%*%t(D)%*%IV%*%sim_values#
+    }#
+#
+	if(return.anc){return(theta)} #
+    data.root.difference = (sim_values - (D%*%theta))#
+  	log.det.product = logdet(vcv.sig2.product)#
+    log.likelihood = -0.5*(t(data.root.difference)%*%IV%*%data.root.difference) - 0.5*log.det.product - length(tree$tip.label)*length(root)*log(2*pi)*0.5#
+  }#
+  return(log.likelihood)#
+}
+max_likelihood = optim(#
+  par = c(sig2.1var,sig2.2var,0,0,0),#
+  fn = log_likelihood_mv_BM_DD_BETA,#
+  tree = tree,#
+  sim.value = sim.results,#
+  dd.ob = dd.ob,#
+  model = "DDexp",#
+  optim = TRUE,#
+  method = "BFGS",#
+  control = list(maxit = 2000, fnscale = -1, trace=2),#
+)
+traceback()
+par=c(24567.5706617237, 24406.4465891207, -195681.690129183, #
+   -567079.469599064, -69067.494368808)
+par
+exp(24567.57)
+max_likelihood = optim(#
+  par = c(sig2.1var,sig2.2var,0,0,0),#
+  fn = log_likelihood_mv_BM_DD_BETA,#
+  tree = tree,#
+  sim.value = sim.results,#
+  dd.ob = dd.ob,#
+  model = "DDexp",#
+  optim = TRUE,#
+  method = "Nelder-Mead",#
+  control = list(maxit = 2000, fnscale = -1, trace=2),#
+)
+max_likelihood
+max_likelihood = optim(#
+  par = c(sig2.1var,sig2.2var,0,0,0),#
+  fn = log_likelihood_mv_BM_DD_BETA,#
+  tree = tree,#
+  sim.value = sim.results,#
+  dd.ob = dd.ob,#
+  model = "DDexp",#
+  optim = TRUE,#
+  method = "L-BFGS-B",#
+  control = list(maxit = 2000, fnscale = -1, trace=1),#
+)
+max_likelihood = optim(#
+  par = c(sig2.1var,sig2.2var,0,0,0),#
+  fn = log_likelihood_mv_BM_DD_BETA,#
+  tree = tree,#
+  sim.value = sim.results,#
+  dd.ob = dd.ob,#
+  model = "DDexp",#
+  optim = TRUE,#
+  method = "L-BFGS-B",#
+  control = list(maxit = 2000, fnscale = -1, trace=6),#
+)
+max_likelihood
+fem<-read.csv("~/Dropbox/Calopteryx archive/2018 Data Analysis/UK_2018_Female_Tethering.csv")
+head(fem)
+fem<-read.csv("~/Dropbox/Calopteryx archive/2018 Data Analysis/UK_2018_Female_Tethering.csv")
+head(fem)
+table(fem$site,fem$treatment,fem$sexual.response)
+fem.success<-subset(fem,complete ==1 & success==1)
+table(fem.success$site,fem.success$treatment,fem.success$sexual.response)
+table(fem.success$site,fem.success$treatment,fem.success$any.courtship)
+table(fem.success$site,fem.success$treatment,fem.success$ab.curl.or.greater)
+table(fem.success$unique.id)
+require(lme4)#
+#
+m1<-glmer(sexual.response~treatment*site+(1|unique.id),family="binomial",data=fem.success)#
+m0<-glmer(sexual.response~treatment+(1|unique.id),family="binomial",data=fem.success)
+summary(m1)
+summary(m0)
+require(glmmADMB)#
+#
+m1<-glmmadmb(sexual.response~treatment*site+(1|unique.id),family="binomial",data=fem.success)#
+m0<-glmmadmb(sexual.response~treatment+(1|unique.id),family="binomial",data=fem.success)
+summary(m1)
+summary(m0)
+m1<-glmmadmb(any.courtship~treatment*site+(1|unique.id),family="binomial",data=fem.success)#
+m0<-glmmadmb(any.courtship~treatment+(1|unique.id),family="binomial",data=fem.success)
+summary(m1)
+fem.success$any.courtship
+fem.success$sexual.response
+fem.success
+fem<-read.csv("~/Dropbox/Calopteryx archive/2018 Data Analysis/UK_2018_Female_Tethering.csv")#
+#
+fem.success<-subset(fem,complete ==1 & success==1)#
+table(fem.success$unique.id)#
+table(fem.success$site,fem.success$treatment,fem.success$ab.curl.or.greater)#
+table(fem.success$site,fem.success$treatment,fem.success$any.courtship)#
+table(fem.success$site,fem.success$treatment,fem.success$sexual.response)#
+#
+require(glmmADMB)#
+#
+m1<-glmmadmb(sexual.response~treatment*site+(1|unique.id),family="binomial",data=fem.success)#
+m0<-glmmadmb(sexual.response~treatment+(1|unique.id),family="binomial",data=fem.success)#
+m1<-glmmadmb(any.courtship~treatment*site+(1|unique.id),family="binomial",data=fem.success)#
+m0<-glmmadmb(any.courtship~treatment+(1|unique.id),family="binomial",data=fem.success)
+m1
+summary(m1)
+summary(m2)
+summary(m0)
+table(fem.success$site,fem.success$any.courtship,fem.success$sexual.response)
+table(fem.success$site,fem.success$treatment,fem.success$sexual.response)
+table(fem.success$site,fem.success$treatment,fem.success$ab.curl.or.greater)
+table(fem.success$site,fem.success$any.courtship,fem.success$ab.curl.or.greater)
+table(fem.success$site,fem.success$courtship.river,fem.success$ab.curl.or.greater)
+table(fem.success$site,fem.success$courtship.buzzfly,fem.success$ab.curl.or.greater)
+fem<-read.csv("~/Dropbox/Calopteryx archive/2018 Data Analysis/UK_2018_Female_Tethering.csv")#
+#
+fem.success<-subset(fem,complete ==1 & success==1)
+table(fem.success$site,fem.success$any.courtship,fem.success$sexual.response)
+table(fem.success$site,fem.success$courtship.buzzfly,fem.success$sexual.response)
+table(fem.success$site,fem.success$courtship.river,fem.success$sexual.response)
+table(fem.success$site,fem.success$courtship.buzzfly,fem.success$ab.curl.or.greater)
+table(fem.success$site,fem.success$courtship.river,fem.success$ab.curl.or.greater)
+table(fem.success$site,fem.success$treatment,fem.success$any.courtship)
+fem.success
+fem.success
+colnames(fem.success)
+fem.success[,c(2:12,14:23)]
+fem.success[,c(2:12,15:23)]
+colnames(fem.success)
+fem.success[,c(2:9,16:19)]
+table(fem.success$site,fem.success$treatment,fem.success$sexual.response)
+matrix(c(5,12,15,2),nrow=2,byrow=T)
+fisher.testmatrix(c(5,12,15,2),nrow=2,byrow=T))
+fisher.test(matrix(c(5,12,15,2),nrow=2,byrow=T))
+fisher.test(matrix(c(17,9,22,4),nrow=2,byrow=T))
