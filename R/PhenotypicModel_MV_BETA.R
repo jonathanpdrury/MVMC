@@ -397,7 +397,7 @@ setMethod(
                     tipdistribution <- getTipDistribution(object, c(0,0,params))
                     
 		            V<-tipdistribution$Sigma
-		            data<-data[rownames(V)]
+		            #data<-data[rownames(V)]
 		  			op <- getOption("show.error.messages")
 		  			options(show.error.messages=FALSE)
 					IV=try(solve(V))
@@ -407,24 +407,24 @@ setMethod(
 		  				if(max(IV)==0){return(Inf)}
 		  			}
 		
-                    I<-matrix(rep(1,n))
+#                    I<-matrix(rep(1,n))
+#					
+#                    m0 <-solve(t(I)%*%IV%*%I)%*%t(I)%*%IV%*%as.matrix(data)[,1]
+                    I=kronecker(diag(2),matrix(1,ncol=1,nrow=(n/2)))
 					
-                    m0 <-solve(t(I)%*%IV%*%I)%*%t(I)%*%IV%*%as.matrix(data)[,1]
-#                    I=kronecker(diag(2),matrix(1,ncol=1,nrow=(n/2)))
-#					
-#					m0 = solve(t(I)%*%IV%*%I)%*%t(I)%*%IV%*%data
-#					m0_1 = m0[1]
-#					m0_2 = m0[2]
-#					
-#                    dataminusXT <- matrix(data - c(rep(m0_1, times=n/2),rep(m0_2,times=n/2)), nrow=1)
-#                    dataminusX <- matrix(data - c(rep(m0_1, times=n/2),rep(m0_2,times=n/2)), ncol=1)
-                    dataminusXT <- matrix(data - rep(m0, times=n), nrow=1)
-                    dataminusX <- matrix(data - rep(m0, times=n), ncol=1)
+					m0 = solve(t(I)%*%IV%*%I)%*%t(I)%*%IV%*%data
+					m0_1 = m0[1]
+					m0_2 = m0[2]
+					
+                    dataminusXT <- matrix(data - (I%*%m0), nrow=1)
+                    dataminusX <- matrix(data - (I%*%m0), ncol=1)
+#                    dataminusXT <- matrix(data - rep(m0, times=n), nrow=1)
+#                    dataminusX <- matrix(data - rep(m0, times=n), ncol=1)
                     ProdVectoriel = dataminusXT %*% IV %*% dataminusX
 
                     calcul <-  (ProdVectoriel + determinant(V)$modulus+ n*log(2*pi)) /2
                     params <- c(m0_1,m0_2, params)
-
+      
                 }else{
                     calcul <- getDataLikelihood(object, data, params)
                 }
@@ -439,9 +439,9 @@ setMethod(
         # looking for the argmin of -log(likelihood) (i.e. argmax of likelihood)
         optimisation <- optim(params0, toBeOptimized)
         inferredParams <- optimisation$par
-        # In GLS-style, we got all parameters except the first one, 'm0' that we compute through a last call to getTipDistribution
+        # In GLS-style, we got all parameters except the first two, 'm0_1' and 'm0_2' that we compute through a last call to getTipDistribution
         if(GLSstyle){
-            tipdistribution <- getTipDistribution(object, c(0,inferredParams))
+            tipdistribution <- getTipDistribution(object, c(0,0,inferredParams))
 		    V<-tipdistribution$Sigma
 		  	op <- getOption("show.error.messages")
 		  	options(show.error.messages=FALSE)
@@ -451,7 +451,7 @@ setMethod(
 		    	IV=pseudoinverse(V) 
 		  		if(max(IV)==0){return(Inf)}
 		  	}
-		    data<-data[rownames(V)]
+		    #data<-data[rownames(V)]
             I=kronecker(diag(2),matrix(1,ncol=1,nrow=(n/2)))
 					
 			m0 = solve(t(I)%*%IV%*%I)%*%t(I)%*%IV%*%data

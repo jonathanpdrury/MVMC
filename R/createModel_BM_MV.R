@@ -6,8 +6,6 @@ createModel_BM_MV <- function(tree){
     
 
         comment <- "Multivariate_BM Model"
-        #paramsNames <- c("m0_1", "m0_2", "logsigma0_1","logsima0_2","r_1", "r_2","sigma0_cov","r_cov")
-        #params0 <- c(0, 0, log(1),log(1),-0.1,-0.1,0,0)
         paramsNames <- c("m0_1", "m0_2", "logsigma0_1","logsima0_2","sigma0_cov12")
         params0 <- c(0, 0, log(1),log(1),0)
 		ntraits<-2
@@ -27,7 +25,6 @@ createModel_BM_MV <- function(tree){
 
         constraints <- function(params) return(params[3]<Inf && params[3] > -Inf && params[4]<Inf && params[4] > -Inf  && params[5]<Inf && params[5] > -Inf)
         
-        #model <- new(Class="PhenotypicADiag", name="BM_MV", period=periodizing$periods, aAGamma=aAGamma, numbersCopy=eventEndOfPeriods$copy, numbersPaste=eventEndOfPeriods$paste, initialCondition=initialCondition, paramsNames=paramsNames, constraints=constraints, params0=params0, tipLabels=eventEndOfPeriods$labeling, comment=comment)
         model <- new(Class="PhenotypicADiag", name="BM_MV", period=periodizing$periods, aAGamma=aAGamma, numbersCopy=eventEndOfPeriods$copy, numbersPaste=eventEndOfPeriods$paste, initialCondition=initialCondition, paramsNames=paramsNames, constraints=constraints, params0=params0, tipLabels=eventEndOfPeriods$labeling, comment=comment)
 
     return(model)
