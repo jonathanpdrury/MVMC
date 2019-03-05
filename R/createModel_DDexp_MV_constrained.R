@@ -2,7 +2,7 @@
 #    Bank of Classic 1D Phenotypic Models
 ##################################################
 
-createModel_DDexp_MV <- function(tree){
+createModel_DDexp_MV_BETA <- function(tree){
     
 
         comment <- "Multivariate_DDexp Model"
