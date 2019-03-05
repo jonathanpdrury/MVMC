@@ -19,6 +19,7 @@ source('~/MVMC/R/createModel_BM_MV.R', chdir = TRUE)
 source('~/MVMC/R/createModel_DDexp_MV.R', chdir = TRUE)
 
 require(phytools)
+require(corpcor)
 
 res.mat<-matrix(nrow=5*3*3, ncol=20)
 colnames(res.mat)<-c("tree","tree.size","sig2.1","sig2.2","sig2.cov","root.1", "root.2", "r.term.1", "r.term.2", "r.term.cov", "est.sig2.1", "est.sig2.2","est.sig2.cov","est.root.1","est.root.2","est.r.term.1","est.r.term.2","est.r.term.cov","lnL","convergence")
@@ -62,7 +63,7 @@ for(i in 1:5){ #for 5 trees
 		res.mat[counter,]<-int
 		print(int)
 		write.csv(res.mat,file="ddm_rpanda_fits_int.csv")
-		
+		counter=counter+1
 		}
 	
 	}	
