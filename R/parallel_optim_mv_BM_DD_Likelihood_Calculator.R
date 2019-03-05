@@ -278,7 +278,7 @@ parallel_max_likelihood_calculator_BM_OU_DD = function(
               )
               if (class(test) == "try-error"){
                 tree.size = c(tree.size,names(tree.list[i]))
-                tree.number = c(tree.number,k)
+                tree.number = c(tree.number,m)
                 sig2.1 = c(sig2.1,sig2.matrices[[j]][1])
                 sig2.2 = c(sig2.2,sig2.matrices[[j]][2])
                 sig2.3 = c(sig2.3,sig2.matrices[[j]][3])
@@ -303,7 +303,7 @@ parallel_max_likelihood_calculator_BM_OU_DD = function(
                 convergence = c(convergence,"error")
               } else {
                 tree.size = c(tree.size,names(tree.list[i]))
-                tree.number = c(tree.number,k)
+                tree.number = c(tree.number,m)
                 sig2.1 = c(sig2.1,sig2.matrices[[j]][1])
                 sig2.2 = c(sig2.2,sig2.matrices[[j]][2])
                 sig2.3 = c(sig2.3,sig2.matrices[[j]][3])
@@ -462,19 +462,48 @@ parallel_max_likelihood_calculator_BM_OU_DD = function(
             
             sig2.1var = log(var(trait.1)/max(nodeHeights(tree.list[[i]][[l]])))
             sig2.2var = log(var(trait.2)/max(nodeHeights(tree.list[[i]][[l]])))
+            dd.ob = createModel_DDexp(tree.list[[i]][[l]])
               
             result = optim(
-              par = c(sig2.1var,sig2.2var,0,0,0,0,0,0),
-              fn = log_likelihood_mv_BM_DD,
+              par = c(sig2.1var,sig2.2var,0,0,0),
+              fn = log_likelihood_mv_BM_DD_BETA,
               tree = tree.list[[i]][[l]],
+              dd.ob = dd.ob,
               sim.value = sim.results[[l]],
               model = "DDexp",
               optim = TRUE,
-              control = list(maxit = 2000)
+              control = list(maxit = 2000,fnscale = -1)
+            )
+            
+            ##find analytical solution for root
+            root = log_likelihood_mv_BM_DD_BETA(
+              tree = tree.list[[i]][[l]],
+              sig2.matrix = matrix(
+                c(
+                  exp(result[[1]][1]),
+                  result[[1]][3], 
+                  result[[1]][3], 
+                  exp(result[[1]][2])
+                ),
+                ncol = 2
+              ),
+              slope.matrix = matrix(
+                c(
+                  result[[1]][4],
+                  0,
+                  0,
+                  result[[1]][5]
+                ),
+                ncol = 2
+              ),
+              dd.ob = dd.ob,
+              sim.value = sim.results[[l]],
+              model = "DDexp",
+              return.anc = TRUE
             )
             
             tree.size = c(tree.size,names(tree.list[i]))
-            tree.number = c(tree.number,k)
+            tree.number = c(tree.number,l)
             sig2.1 = c(sig2.1,sig2.matrices[[j]][1])
             sig2.2 = c(sig2.2,sig2.matrices[[j]][4])
             sig2.cov = c(sig2.cov,sig2.matrices[[j]][2])
@@ -486,11 +515,11 @@ parallel_max_likelihood_calculator_BM_OU_DD = function(
             est.sig2.1 = c(est.sig2.1,exp(result[[1]][1]))
             est.sig2.2 = c(est.sig2.2,exp(result[[1]][2]))
             est.sig2.cov = c(est.sig2.cov,result[[1]][3])
-            est.root.1 = c(est.root.1,result[[1]][4])
-            est.root.2 = c(est.root.2,result[[1]][5])
-            est.r.term.1 = c(est.r.term.1,result[[1]][6])
-            est.r.term.2 = c(est.r.term.2,result[[1]][7])
-            est.r.term.cov = c(est.r.term.cov,result[[1]][8])
+            est.root.1 = c(est.root.1,root[1])
+            est.root.2 = c(est.root.2,root[2])
+            est.r.term.1 = c(est.r.term.1,result[[1]][4])
+            est.r.term.2 = c(est.r.term.2,result[[1]][5])
+            est.r.term.cov = c(est.r.term.cov,0)
             log.likelihood = c(log.likelihood,result[[2]])
             convergence = c(convergence,result[[4]])
           }
@@ -633,7 +662,7 @@ parallel_max_likelihood_calculator_BM_OU_DD = function(
             )
             
             tree.size = c(tree.size,names(tree.list[i]))
-            tree.number = c(tree.number,k)
+            tree.number = c(tree.number,l)
             sig2.1 = c(sig2.1,sig2.matrices[[j]][1])
             sig2.2 = c(sig2.2,sig2.matrices[[j]][4])
             sig2.cov = c(sig2.cov,sig2.matrices[[j]][2])
@@ -792,7 +821,7 @@ parallel_max_likelihood_calculator_BM_OU_DD = function(
             )
             
             tree.size = c(tree.size,names(tree.list[i]))
-            tree.number = c(tree.number,k)
+            tree.number = c(tree.number,l)
             sig2.1 = c(sig2.1,sig2.matrices[[j]][1])
             sig2.2 = c(sig2.2,sig2.matrices[[j]][4])
             sig2.cov = c(sig2.cov,sig2.matrices[[j]][2])
@@ -954,7 +983,7 @@ parallel_max_likelihood_calculator_BM_OU_DD = function(
             data.frame.position = (i-1)*(j-1)*(k-1)*l + (j-1)*(k-1)*l + (k-1)*l + l
             
             tree.size = c(tree.size,names(tree.list[i]))
-            tree.number = c(tree.number,k)
+            tree.number = c(tree.number,l)
             sig2.1 = c(sig2.1,sig2.matrices[[j]][1])
             sig2.2 = c(sig2.2,sig2.matrices[[j]][4])
             sig2.cov = c(sig2.cov,sig2.matrices[[j]][2])
