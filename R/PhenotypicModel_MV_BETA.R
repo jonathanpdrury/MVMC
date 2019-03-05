@@ -437,7 +437,7 @@ setMethod(
         }
 
         # looking for the argmin of -log(likelihood) (i.e. argmax of likelihood)
-        optimisation <- optim(params0, toBeOptimized)
+        optimisation <- optim(params0, toBeOptimized,control= list(maxit=20000))
         inferredParams <- optimisation$par
         # In GLS-style, we got all parameters except the first two, 'm0_1' and 'm0_2' that we compute through a last call to getTipDistribution
         if(GLSstyle){
