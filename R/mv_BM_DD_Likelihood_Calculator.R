@@ -28,7 +28,7 @@ if (optim){
    		slope.matrix = matrix(c(par[4],par[6],par[6],par[5]),ncol=2)
    		no.taxa=length(sim.value)
   		test = sig2.matrix*exp(slope.matrix*no.taxa)
-  		if(abs(test[1,2])>test[1,1] || abs(test[1,2])>test[2,2]){
+  		if(abs(test[1,2])>test[1,1] || abs(test[1,2])>test[2,2] || abs(sig2.matrix[1,2])>sig2.matrix[1,1] || abs(sig2.matrix[1,2])>sig2.matrix[2,2]){
  			 return(-1E6)
   		}
   		
