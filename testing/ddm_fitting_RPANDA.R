@@ -69,3 +69,54 @@ for(i in 1:5){ #for 5 trees
 	}	
 
 }	
+
+require(mvMORPH)
+
+#now fitting BM.
+
+res.mat<-matrix(nrow=5*3*3, ncol=17)
+colnames(res.mat)<-c("tree","tree.size","sig2.1","sig2.2","sig2.cov","root.1", "root.2", "r.term.1", "r.term.2", "r.term.cov", "est.sig2.1", "est.sig2.2","est.sig2.cov","est.root.1","est.root.2","lnL","convergence")
+counter=1
+for(i in 1:5){ #for 5 trees
+
+	for(j in 1:3){ #for 3 sig2 matrices
+	
+		for(k in 1:3){ #for 3 slope matrices
+		
+		tree<-tree.list[[2]][[i]]
+		
+		eval(parse(text=paste0("data<-DDexp_neg_sim_tree_50_root_sig2_",j,"_tip_sig2_",k,"_complete[[",i,"]]")))
+		
+		traits = matrix(nrow=length(tree$tip.label),ncol=2)
+		for (l in 1:length(tree$tip.label)){
+ 		 	traits[l,1] = data[[l]][1]
+  			traits[l,2] = data[[l]][2]
+		}
+		colnames(traits) = c("trait.1","trait.2")
+		rownames(traits) = names(data)
+		
+		bmm.fit<-mvBM(tree,traits,model="BM1")
+		if(bmm.fit$convergence!=0){
+			bmm.fit<-mvBM(tree,traits,model="BM1",method="pic")
+		}
+		if(bmm.fit$convergence!=0){
+			bmm.fit<-mvBM(tree,traits,model="BM1",method="sparse")
+		}
+		
+		bmm.sig2_1<-bmm.fit$sigma[1,1]
+		bmm.sig2_2<-bmm.fit$sigma[2,2]
+		bmm.sig2_cov<-bmm.fit$sigma[2,1]
+		bmm.m0_1<-(bmm.fit$theta[1])
+		bmm.m0_2<-(bmm.fit$theta[2])
+		
+		int<-c(i,50,sig2.matrices[[j]][1,1],sig2.matrices[[j]][2,2],sig2.matrices[[j]][2,1],0,0,pars.list[[2]][[j]][[k]][1,1],pars.list[[2]][[j]][[k]][2,2],pars.list[[2]][[j]][[k]][1,2],bmm.sig2_1,bmm.sig2_2,bmm.sig2_cov,bmm.m0_1,bmm.m0_2,bmm.fit$LogLik, bmm.fit$convergence)
+		
+		res.mat[counter,]<-int
+		print(int)
+		write.csv(res.mat,file="bmm_rpanda_fits_int.csv")
+		counter=counter+1
+		}
+	
+	}	
+
+}	
