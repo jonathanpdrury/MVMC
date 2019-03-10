@@ -25,8 +25,8 @@ createModel_DDexp_MV <- function(tree){
             return(list(a=vectorA, A=matrixA, Gamma=matrixGamma))
         }
 
-        #constraints <- function(params) return(params[3]<Inf && params[3] > -Inf && params[4]<Inf && params[4] > -Inf  && params[5]<Inf && params[5] > -Inf && (params[7])*exp(params[8]*length(tree$tip.label)) <= exp(params[4])*exp(params[6]*length(tree$tip.label)) && (params[7])*exp(params[8]*length(tree$tip.label)) <= exp(params[3])*exp(params[5]*length(tree$tip.label)) && params[7] <= params[3] && params[7] <= params[4])
-        constraints <- function(params) return(params[3]<Inf && params[3] > -Inf && params[4]<Inf && params[4] > -Inf && params[5]<Inf && params[5] > -Inf && (((abs(params[7])*exp(params[8]*length(tree$tip.label))) <= (exp(params[4])*exp(params[6]*length(tree$tip.label)))) || ((abs(params[7])*exp(params[8]*length(tree$tip.label))) <= (exp(params[3])*exp(params[5]*length(tree$tip.label))))) && ((abs(params[7]) <= exp(params[3])) || (abs(params[7]) <= exp(params[4]))))
+        constraints <- function(params) return(params[3]<Inf && params[3] > -Inf && params[4]<Inf && params[4] > -Inf  && params[5]<Inf && params[5] > -Inf && (params[7])*exp(params[8]*length(tree$tip.label)) <= exp(params[4])*exp(params[6]*length(tree$tip.label)) && (params[7])*exp(params[8]*length(tree$tip.label)) <= exp(params[3])*exp(params[5]*length(tree$tip.label)) && params[7] <= params[3] && params[7] <= params[4])
+        
         
         model <- new(Class="PhenotypicADiag", name="DDexp_MV", period=periodizing$periods, aAGamma=aAGamma, numbersCopy=eventEndOfPeriods$copy, numbersPaste=eventEndOfPeriods$paste, initialCondition=initialCondition, paramsNames=paramsNames, constraints=constraints, params0=params0, tipLabels=eventEndOfPeriods$labeling, comment=comment)
 
