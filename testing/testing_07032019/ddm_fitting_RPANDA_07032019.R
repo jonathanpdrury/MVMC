@@ -24,6 +24,7 @@ source('~/MVMC/R/createModel_DDexp_MV.R', chdir = TRUE)
 
 require(phytools)
 require(corpcor)
+require(mvMORPH)
 
 res.mat<-matrix(nrow=10*6*2, ncol=27)
 colnames(res.mat)<-c("tree","tree.size","sig2.1","sig2.2","sig2.cov","root.1", "root.2", "r.term.1", "r.term.2", "r.term.cov", "DDexp.est.sig2.1", "DDexp.est.sig2.2","DDexp.est.sig2.cov","DDexp.est.root.1","DDexp.est.root.2","DDexp.est.r.term.1","DDexp.est.r.term.2","DDexp.est.r.term.cov","DDexp.lnL","DDexp.convergence","BM.est.sig2.1","BM.est.sig2.2","BM.est.sig2.cov","BM.est.root.1","BM.est.root.2","BM.lnL","BM.convergence")
@@ -80,7 +81,7 @@ for(i in 1:10){ #for 5 trees
 		
 		res.mat[counter,]<-int
 		print(int)
-		write.csv(res.mat,file="~/Dropbox/ddm_rpanda_fits_int_07032019.csv")
+		write.csv(res.mat,file="~/Dropbox/ddm_rpanda_fits_int_08032019_newconstraints.csv")
 		counter=counter+1
 		}
 	
