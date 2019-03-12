@@ -165,12 +165,12 @@ updateBranchingMatrixSigma <- function(Sigma, copy, paste){
     n = length(Sigma[1,])/2
     newSigma1 <- diag(0, n+1)
     newSigma2 <- diag(0, n+1)
-#    newSigma3 <- diag(0, n+1)
+    newSigma3 <- diag(0, n+1)
     newSigma4 <- diag(0, n+1)
 
     Sigma1=as.matrix(Sigma[1:n,1:n])
     Sigma2=as.matrix(Sigma[1:n,(n+1):length(Sigma[1,])])
-#    Sigma3=as.matrix(Sigma[(n+1):length(Sigma[1,]),1:n])
+    Sigma3=as.matrix(Sigma[(n+1):length(Sigma[1,]),1:n])
     Sigma4=as.matrix(Sigma[(n+1):length(Sigma[1,]),(n+1):length(Sigma[1,])])
     
     
@@ -184,10 +184,10 @@ updateBranchingMatrixSigma <- function(Sigma, copy, paste){
     newSigma2[1:(paste-1),paste] <- Sigma2[1:(paste-1),copy]
     newSigma2[paste,paste] <- Sigma2[copy,copy]
 
-#    newSigma3[1:(paste-1),1:(paste-1)] <- Sigma3[1:(paste-1),1:(paste-1)]
-#    newSigma3[paste,1:(paste-1)] <- Sigma3[copy,1:(paste-1)]
-#    newSigma3[1:(paste-1),paste] <- Sigma3[1:(paste-1),copy]
-#    newSigma3[paste,paste] <- Sigma3[copy,copy]
+    newSigma3[1:(paste-1),1:(paste-1)] <- Sigma3[1:(paste-1),1:(paste-1)]
+    newSigma3[paste,1:(paste-1)] <- Sigma3[copy,1:(paste-1)]
+    newSigma3[1:(paste-1),paste] <- Sigma3[1:(paste-1),copy]
+    newSigma3[paste,paste] <- Sigma3[copy,copy]
 
     newSigma4[1:(paste-1),1:(paste-1)] <- Sigma4[1:(paste-1),1:(paste-1)]
     newSigma4[paste,1:(paste-1)] <- Sigma4[copy,1:(paste-1)]
@@ -207,11 +207,11 @@ updateBranchingMatrixSigma <- function(Sigma, copy, paste){
         newSigma2[paste,(paste+1):(n+1)] <- Sigma2[copy,paste:n]
         newSigma2[(paste+1):(n+1),(paste+1):(n+1)] <- Sigma2[paste:n, paste:n]
         
-#        newSigma3[(paste+1):(n+1),1:(paste-1)] <- Sigma3[paste:n,1:(paste-1)]
-#        newSigma3[(paste+1):(n+1),paste] <- Sigma3[paste:n,copy]
-#        newSigma3[1:(paste-1),(paste+1):(n+1)] <- Sigma3[1:(paste-1),paste:n]
-#        newSigma3[paste,(paste+1):(n+1)] <- Sigma3[copy,paste:n]
-#        newSigma3[(paste+1):(n+1),(paste+1):(n+1)] <- Sigma3[paste:n, paste:n]
+        newSigma3[(paste+1):(n+1),1:(paste-1)] <- Sigma3[paste:n,1:(paste-1)]
+        newSigma3[(paste+1):(n+1),paste] <- Sigma3[paste:n,copy]
+        newSigma3[1:(paste-1),(paste+1):(n+1)] <- Sigma3[1:(paste-1),paste:n]
+        newSigma3[paste,(paste+1):(n+1)] <- Sigma3[copy,paste:n]
+        newSigma3[(paste+1):(n+1),(paste+1):(n+1)] <- Sigma3[paste:n, paste:n]
         
         newSigma4[(paste+1):(n+1),1:(paste-1)] <- Sigma4[paste:n,1:(paste-1)]
         newSigma4[(paste+1):(n+1),paste] <- Sigma4[paste:n,copy]
@@ -220,8 +220,7 @@ updateBranchingMatrixSigma <- function(Sigma, copy, paste){
         newSigma4[(paste+1):(n+1),(paste+1):(n+1)] <- Sigma4[paste:n, paste:n]
     }
 	
-#	newSigma=rbind(cbind(newSigma1,newSigma2),cbind(newSigma3,newSigma4))
-	newSigma=rbind(cbind(newSigma1,newSigma2),cbind(newSigma2,newSigma4))
+	newSigma=rbind(cbind(newSigma1,newSigma2),cbind(newSigma3,newSigma4))
     return(newSigma)
 }
 
@@ -252,15 +251,11 @@ setMethod(
                 mean1<-mean[1:(length(mean)/2)]
                 mean2<-mean[((length(mean)/2)+1):length(mean)]
                 if( object@numbersPaste[i] <= length(mean1) ){
-      #              mean <- c( mean[1:(object@numbersPaste[i]-1)], mean[object@numbersCopy[i]], mean[object@numbersPaste[i]:length(mean)] )
-	  #					 mean <- c( mean[1:(object@numbersPaste[i]-1)], mean[object@numbersCopy[i]], mean[object@numbersPaste[i]:length(mean)],mean[((length(mean)/2)+1):((length(mean)/2)+(object@numbersPaste[i]-1))], mean[((length(mean)/2)+object@numbersCopy[i])], mean[((length(mean)/2)+object@numbersPaste[i]):length(mean)] )
 	  					mean1 <- c( mean1[1:(object@numbersPaste[i]-1)], mean1[object@numbersCopy[i]], mean1[object@numbersPaste[i]:length(mean1)] )
 	  					mean2 <- c( mean2[1:(object@numbersPaste[i]-1)], mean2[object@numbersCopy[i]], mean2[object@numbersPaste[i]:length(mean2)] )
 	  					mean<-c(mean1,mean2)
 	  					
                 }else{
-      #             mean <- c( mean, mean[object@numbersCopy[i]] )
-      #              mean <- c( mean[1:(length(mean)/2)], mean[object@numbersCopy[i]], mean[((length(mean)/2)+1):length(mean)],mean[object@numbersCopy[i]] )
                    mean1 <- c( mean1, mean1[object@numbersCopy[i]] )
                    mean2 <- c( mean2, mean2[object@numbersCopy[i]] )
 	  			   mean<-c(mean1,mean2)
@@ -288,14 +283,13 @@ setMethod(
 
             # We update the vectors of means and covariances through their ODE system resolution
             times <- c(object@period[i], object@period[i+1])
-#            print(Gammai(times[1]))
-#            print(Ai)
-#            print(ai)
             if((object@period[i+1]-object@period[i])> 1e-15 ){
-                mean  <- ode(mean, times, derivativemean)[2, 2:(n+1)]
-                sigma <- ode(as.vector(Sigma), times, derivativeSigma)[2, 2:(n*n+1)]
+                #mean  <- ode(mean, times, derivativemean)[2, 2:(n+1)]
+                #sigma <- ode(as.vector(Sigma), times, derivativeSigma)[2, 2:(n*n+1)]
+                sigma <- Sigma + (Gammai(t) %*% t(Gammai(t)))*diff(times)
             }
-            Sigma = matrix(sigma,nrow=n)
+            #Sigma = matrix(sigma,nrow=n)
+            Sigma = sigma
         }
         
         mean <- matrix(data=mean, ncol=1)
@@ -495,55 +489,3 @@ setMethod(
     }
 )
 
-####################################
-##    Simulation
-####################################
-#
-#setGeneric(
-#    name="simulateTipData",
-#    def=function(object="PhenotypicModel", params="numeric", method="numeric"){standardGeneric("simulateTipData")}
-#)
-#
-#setMethod(
-#    f="simulateTipData",
-#    signature="PhenotypicModel",
-#    definition=function(object, params, method=3){
-#        cat("*** Simulation of tip trait values ***\n")
-#        if( method == 1 ){
-#            cat("Computing first the tip distribution, and returning a simulated dataset drawn in this distribution...\n")
-#            tipdistribution <- getTipDistribution(object, params)
-#            X <- rmvnorm(1, tipdistribution$mean, tipdistribution$Sigma)
-#
-#        }else if( method == 2 ){        
-#            cat("Simulating step-by-step the whole trajectory of a realization of the model and plotting the whole trajectory, before returning the tip data...\n")
-#
-#        }else{
-#            cat("Simulating step-by-step the whole trajectory of a realization of the model, before returning only the tip data...\n")
-#
-#            initialCondition <- object@initialCondition(params)
-#            X <- rnorm(length(initialCondition$mean), initialCondition$mean, initialCondition$var)
-#            dt <- 0.001
-#            sqrtdt <- sqrt(dt)
-#        
-#            for(i in 1:(length(object@period)-1)){
-#                # If there is a branching event at the beginning of the period
-#                if(object@numbersPaste[i] != 0){
-#                    if( object@numbersCopy[i] < length(X) ){
-#                        X <- c( X[1:object@numbersCopy[i]], X[object@numbersCopy[i]], X[(object@numbersCopy[i]+1):length(X)] )
-#                    }else{
-#                        X <- c( X, X[object@numbersCopy[i]] )
-#                    }
-#
-#                }
-#                # The time period is sliced
-#                time <- seq( from = object@period[i], to = object@period[i+1], by = dt )
-#                for(t in time){
-#                    aAGammai <- object@aAGamma(i, params)  
-#                    X <- X + (aAGammai$a(t) - aAGammai$A %*% X)*dt + sqrtdt* aAGammai$Gamma(t) %*% rnorm(length(X), 0, 1)
-#                }
-#            }
-#        }
-#	X <- matrix(data=X, ncol=1)
-#        return(X)
-#    }
-#)
