@@ -165,12 +165,12 @@ updateBranchingMatrixSigma <- function(Sigma, copy, paste){
     n = length(Sigma[1,])/2
     newSigma1 <- diag(0, n+1)
     newSigma2 <- diag(0, n+1)
-    newSigma3 <- diag(0, n+1)
+#    newSigma3 <- diag(0, n+1)
     newSigma4 <- diag(0, n+1)
 
     Sigma1=as.matrix(Sigma[1:n,1:n])
     Sigma2=as.matrix(Sigma[1:n,(n+1):length(Sigma[1,])])
-    Sigma3=as.matrix(Sigma[(n+1):length(Sigma[1,]),1:n])
+#    Sigma3=as.matrix(Sigma[(n+1):length(Sigma[1,]),1:n])
     Sigma4=as.matrix(Sigma[(n+1):length(Sigma[1,]),(n+1):length(Sigma[1,])])
     
     
@@ -184,10 +184,10 @@ updateBranchingMatrixSigma <- function(Sigma, copy, paste){
     newSigma2[1:(paste-1),paste] <- Sigma2[1:(paste-1),copy]
     newSigma2[paste,paste] <- Sigma2[copy,copy]
 
-    newSigma3[1:(paste-1),1:(paste-1)] <- Sigma3[1:(paste-1),1:(paste-1)]
-    newSigma3[paste,1:(paste-1)] <- Sigma3[copy,1:(paste-1)]
-    newSigma3[1:(paste-1),paste] <- Sigma3[1:(paste-1),copy]
-    newSigma3[paste,paste] <- Sigma3[copy,copy]
+#    newSigma3[1:(paste-1),1:(paste-1)] <- Sigma3[1:(paste-1),1:(paste-1)]
+#    newSigma3[paste,1:(paste-1)] <- Sigma3[copy,1:(paste-1)]
+#    newSigma3[1:(paste-1),paste] <- Sigma3[1:(paste-1),copy]
+#    newSigma3[paste,paste] <- Sigma3[copy,copy]
 
     newSigma4[1:(paste-1),1:(paste-1)] <- Sigma4[1:(paste-1),1:(paste-1)]
     newSigma4[paste,1:(paste-1)] <- Sigma4[copy,1:(paste-1)]
@@ -207,11 +207,11 @@ updateBranchingMatrixSigma <- function(Sigma, copy, paste){
         newSigma2[paste,(paste+1):(n+1)] <- Sigma2[copy,paste:n]
         newSigma2[(paste+1):(n+1),(paste+1):(n+1)] <- Sigma2[paste:n, paste:n]
         
-        newSigma3[(paste+1):(n+1),1:(paste-1)] <- Sigma3[paste:n,1:(paste-1)]
-        newSigma3[(paste+1):(n+1),paste] <- Sigma3[paste:n,copy]
-        newSigma3[1:(paste-1),(paste+1):(n+1)] <- Sigma3[1:(paste-1),paste:n]
-        newSigma3[paste,(paste+1):(n+1)] <- Sigma3[copy,paste:n]
-        newSigma3[(paste+1):(n+1),(paste+1):(n+1)] <- Sigma3[paste:n, paste:n]
+#        newSigma3[(paste+1):(n+1),1:(paste-1)] <- Sigma3[paste:n,1:(paste-1)]
+#        newSigma3[(paste+1):(n+1),paste] <- Sigma3[paste:n,copy]
+#        newSigma3[1:(paste-1),(paste+1):(n+1)] <- Sigma3[1:(paste-1),paste:n]
+#        newSigma3[paste,(paste+1):(n+1)] <- Sigma3[copy,paste:n]
+#        newSigma3[(paste+1):(n+1),(paste+1):(n+1)] <- Sigma3[paste:n, paste:n]
         
         newSigma4[(paste+1):(n+1),1:(paste-1)] <- Sigma4[paste:n,1:(paste-1)]
         newSigma4[(paste+1):(n+1),paste] <- Sigma4[paste:n,copy]
@@ -220,7 +220,8 @@ updateBranchingMatrixSigma <- function(Sigma, copy, paste){
         newSigma4[(paste+1):(n+1),(paste+1):(n+1)] <- Sigma4[paste:n, paste:n]
     }
 	
-	newSigma=rbind(cbind(newSigma1,newSigma2),cbind(newSigma3,newSigma4))
+#	newSigma=rbind(cbind(newSigma1,newSigma2),cbind(newSigma3,newSigma4))
+	newSigma=rbind(cbind(newSigma1,newSigma2),cbind(newSigma2,newSigma4))
     return(newSigma)
 }
 
