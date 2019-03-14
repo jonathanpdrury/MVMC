@@ -21,7 +21,8 @@ createModel_DDlin_MV_BETA <- function(tree){
             vectorU <- getLivingLineages(i, eventEndOfPeriods)
             vectorA <- function(t) return(rep(0, length(vectorU)*2))
             #matrixGamma <- function(t) return(rbind(cbind((exp(params[3])*exp((params[5]/2)*length(vectorU)))*diag(vectorU), (params[7]*diag(vectorU))),cbind( (params[7]*diag(vectorU)),(exp(params[4])*exp((params[6]/2)*length(vectorU)))*diag(vectorU))))
-            matrixGamma <- function(t) return(rbind(cbind(sqrt((exp(params[3])^2)+(params[5]*length(vectorU)))*diag(vectorU),params[7]*diag(vectorU)),cbind(params[7]*diag(vectorU),sqrt((exp(params[4])^2)+(params[6]*length(vectorU)))*diag(vectorU))))
+            #matrixGamma <- function(t) return(rbind(cbind(sqrt((exp(params[3])^2)+(params[5]*length(vectorU)))*diag(vectorU),params[7]*diag(vectorU)),cbind(params[7]*diag(vectorU),sqrt((exp(params[4])^2)+(params[6]*length(vectorU)))*diag(vectorU))))
+            matrixGamma <- function(t) return(rbind(cbind(sqrt((exp(params[3])^2)+(params[5]*length(vectorU)))*diag(vectorU),sqrt(((params[7])^2)+(sqrt(params[5]*params[6])*length(vectorU)))*diag(vectorU)),cbind(sqrt(((params[7])^2)+(sqrt(params[5]*params[6])*length(vectorU)))*diag(vectorU),sqrt((exp(params[4])^2)+(params[6]*length(vectorU)))*diag(vectorU))))
 
             matrixA <- diag(0, length(vectorU)*2)
             return(list(a=vectorA, A=matrixA, Gamma=matrixGamma))

@@ -20,7 +20,8 @@ createModel_DDexp_MV_BETA <- function(tree){
         aAGamma <- function(i, params){
             vectorU <- getLivingLineages(i, eventEndOfPeriods)
             vectorA <- function(t) return(rep(0, length(vectorU)*2))
-            matrixGamma <- function(t) return(rbind(cbind((exp(params[3])*exp((params[5]/2)*length(vectorU)))*diag(vectorU), (params[7]*diag(vectorU))),cbind( (params[7]*diag(vectorU)),(exp(params[4])*exp((params[6]/2)*length(vectorU)))*diag(vectorU))))
+            #matrixGamma <- function(t) return(rbind(cbind((exp(params[3])*exp((params[5]/2)*length(vectorU)))*diag(vectorU), (params[7]*diag(vectorU))),cbind( (params[7]*diag(vectorU)),(exp(params[4])*exp((params[6]/2)*length(vectorU)))*diag(vectorU))))
+            matrixGamma <- function(t) return(rbind(cbind((exp(params[3])*exp((params[5]/2)*length(vectorU)))*diag(vectorU), ((params[7])*exp(sqrt((params[5]/2)*(params[6]/2))*length(vectorU)))*diag(vectorU)),cbind( ((params[7])*exp(sqrt((params[5]/2)*(params[6]/2))*length(vectorU)))*diag(vectorU),(exp(params[4])*exp((params[6]/2)*length(vectorU)))*diag(vectorU))))
             matrixA <- diag(0, length(vectorU)*2)
             return(list(a=vectorA, A=matrixA, Gamma=matrixGamma))
         }
