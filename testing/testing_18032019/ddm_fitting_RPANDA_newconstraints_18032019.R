@@ -40,18 +40,6 @@ for(i in 1:20){ #for 5 trees
 		bmm<-createModel_BM_MV(tree)
 		vcv_2<-getTipDistribution(bmm,params=c(0,0,0,0,0))$Sigma
 		data.sorted<-c(traits[rownames(vcv_2)[1:50],1],traits[rownames(vcv_2)[1:50],2])
-
-		ddm<-createModel_DDexp_MV(tree)
-		ddm.fit<-fitTipData(ddm,data.sorted,GLSstyle=TRUE)
-		
-		ddm.sig2_1<-exp(ddm.fit$inferredParams[3])
-		ddm.sig2_2<-exp(ddm.fit$inferredParams[4])
-		ddm.sig2_cov<-(ddm.fit$inferredParams[7])
-		ddm.r_1<-(ddm.fit$inferredParams[5])
-		ddm.r_2<-(ddm.fit$inferredParams[6])
-		ddm.r_cov<-(ddm.fit$inferredParams[8])
-		ddm.m0_1<-(ddm.fit$inferredParams[1])
-		ddm.m0_2<-(ddm.fit$inferredParams[2])
 		
 		bmm.fit<-mvBM(tree,traits,model="BM1")
 		if(bmm.fit$convergence!=0){
@@ -66,6 +54,20 @@ for(i in 1:20){ #for 5 trees
 		bmm.sig2_cov<-bmm.fit$sigma[2,1]
 		bmm.m0_1<-(bmm.fit$theta[1])
 		bmm.m0_2<-(bmm.fit$theta[2])
+
+		ddm<-createModel_DDexp_MV(tree)
+		params0=c(0,0,log(sqrt(bmm.sig2_1)),log(sqrt(bmm.sig2_2)),0,0,bmm.sig2_cov,0)
+		ddm.fit<-fitTipData(ddm,data.sorted,params0=params0,GLSstyle=TRUE)
+		
+		ddm.sig2_1<-exp(ddm.fit$inferredParams[3])
+		ddm.sig2_2<-exp(ddm.fit$inferredParams[4])
+		ddm.sig2_cov<-(ddm.fit$inferredParams[7])
+		ddm.r_1<-(ddm.fit$inferredParams[5])
+		ddm.r_2<-(ddm.fit$inferredParams[6])
+		ddm.r_cov<-(ddm.fit$inferredParams[8])
+		ddm.m0_1<-(ddm.fit$inferredParams[1])
+		ddm.m0_2<-(ddm.fit$inferredParams[2])
+
 
 		oum.fit<-mvOU(tree,traits,model="OU1")
 		if(oum.fit$convergence!=0){
@@ -85,12 +87,14 @@ for(i in 1:20){ #for 5 trees
 		oum.alpha_1<-oum.fit$alpha[1,1]
 		oum.alpha_2<-oum.fit$alpha[2,2]
 		oum.alpha_cov<-oum.fit$alpha[2,1]
+		
+		
 
 		int<-c(i,50,sig2.matrices[[j]][1,1],sig2.matrices[[j]][2,2],sig2.matrices[[j]][2,1],0,0,pars.list[[2]][[j]][[k]][1,1],pars.list[[2]][[j]][[k]][2,2],pars.list[[2]][[j]][[k]][1,2],ddm.sig2_1,ddm.sig2_2,ddm.sig2_cov,ddm.m0_1,ddm.m0_2,ddm.r_1,ddm.r_2,ddm.r_cov,-ddm.fit$value, ddm.fit$convergence,bmm.sig2_1,bmm.sig2_2,bmm.sig2_cov,bmm.m0_1,bmm.m0_2,bmm.fit$LogLik, bmm.fit$convergence,oum.sig2_1,oum.sig2_2,oum.sig2_cov,oum.m0_1,oum.m0_2,oum.alpha_1,oum.alpha_2,oum.alpha_cov,oum.fit$LogLik, oum.fit$convergence)
 		
 		res.mat[counter,]<-int
 		print(int)
-		write.csv(res.mat,file="~/Dropbox/ddm_rpanda_fits_BETA_int_18032019_newconstraints.csv")
+		write.csv(res.mat,file="~/Dropbox/ddm_rpanda_fits_int_18032019_PDconstraints_BM_start.csv")
 		counter=counter+1
 		}
 	
