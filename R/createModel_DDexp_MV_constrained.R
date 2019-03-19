@@ -20,16 +20,17 @@ createModel_DDexp_MV_BETA <- function(tree){
         aAGamma <- function(i, params){
             vectorU <- getLivingLineages(i, eventEndOfPeriods)
             vectorA <- function(t) return(rep(0, length(vectorU)*2))
-            #matrixGamma <- function(t) return(rbind(cbind((exp(params[3])*exp((params[5]/2)*length(vectorU)))*diag(vectorU), (params[7]*diag(vectorU))),cbind( (params[7]*diag(vectorU)),(exp(params[4])*exp((params[6]/2)*length(vectorU)))*diag(vectorU))))
-            matrixGamma <- function(t) return(rbind(cbind((exp(params[3])*exp((params[5]/2)*length(vectorU)))*diag(vectorU), ((params[7])*exp(sqrt((params[5]/2)*(params[6]/2))*length(vectorU)))*diag(vectorU)),cbind( ((params[7])*exp(sqrt((params[5]/2)*(params[6]/2))*length(vectorU)))*diag(vectorU),(exp(params[4])*exp((params[6]/2)*length(vectorU)))*diag(vectorU))))
+            matrixGamma <- function(t) return(rbind(cbind((exp(params[3])*exp((params[5]/2)*length(vectorU)))*diag(vectorU), (params[7]*diag(vectorU))),cbind( (params[7]*diag(vectorU)),(exp(params[4])*exp((params[6]/2)*length(vectorU)))*diag(vectorU))))
+            #matrixGamma <- function(t) return(rbind(cbind((exp(params[3])*exp((params[5]/2)*length(vectorU)))*diag(vectorU), ((params[7])*exp(sqrt((params[5]/2)*(params[6]/2))*length(vectorU)))*diag(vectorU)),cbind( ((params[7])*exp(sqrt((params[5]/2)*(params[6]/2))*length(vectorU)))*diag(vectorU),(exp(params[4])*exp((params[6]/2)*length(vectorU)))*diag(vectorU))))
             matrixA <- diag(0, length(vectorU)*2)
             return(list(a=vectorA, A=matrixA, Gamma=matrixGamma))
         }
 
         #constraints <- function(params) return(params[3]<Inf && params[3] > -Inf && params[4]<Inf && params[4] > -Inf  && params[5]<Inf && params[5] > -Inf && (params[7]) <= exp(params[4])*exp(params[6]*length(tree$tip.label)) && (params[7]) <= exp(params[3])*exp(params[5]*length(tree$tip.label)) && params[7] <= params[3] && params[7] <= params[4])
         #constraints <- function(params) return(params[3]<Inf && params[3] > -Inf && params[4]<Inf && params[4] > -Inf  && params[5]<Inf && params[5] > -Inf && (abs(params[7]) <= exp(params[4])*exp(params[6]*length(tree$tip.label)) || abs(params[7])<= exp(params[3])*exp(params[5]*length(tree$tip.label))) && (abs(params[7]) <= exp(params[3]) || abs(params[7]) <= exp(params[4])))
-        constraints <- function(params) return(params[3]<Inf && params[3] > -Inf && params[4]<Inf && params[4] > -Inf && params[5]<Inf && params[5] > -Inf && all(sign(eigen(matrix(c(exp(params[3]),params[7],params[7],exp(params[4])),nrow=2))$values)!=-1) && all(sign(eigen(matrix(c(exp(params[3])*exp(params[5]*length(tree$tip.label)),params[7]*exp(sqrt(params[5]*params[6])*length(tree$tip.label)),params[7]*exp(sqrt(params[5]*params[6])*length(tree$tip.label)),exp(params[4])*exp(params[6]*length(tree$tip.label))),nrow=2))$values)!=-1))
-	
+        constraints <- function(params) return(params[3]<Inf && params[3] > -Inf && params[4]<Inf && params[4] > -Inf && params[5]<Inf && params[5] > -Inf && all(sign(eigen(matrix(c(exp(params[3]),params[7],params[7],exp(params[4])),nrow=2))$values)!=-1) && all(sign(eigen(matrix(c(exp(params[3])*exp(params[5]*length(tree$tip.label)),params[7],params[7],exp(params[4])*exp(params[6]*length(tree$tip.label))),nrow=2))$values)!=-1))
+        #constraints <- function(params) return(params[3]<Inf && params[3] > -Inf && params[4]<Inf && params[4] > -Inf && params[5]<Inf && params[5] > -Inf)
+        		
 		model <- new(Class="PhenotypicADiag", name="DDexp_MV", period=periodizing$periods, aAGamma=aAGamma, numbersCopy=eventEndOfPeriods$copy, numbersPaste=eventEndOfPeriods$paste, initialCondition=initialCondition, paramsNames=paramsNames, constraints=constraints, params0=params0, tipLabels=eventEndOfPeriods$labeling, comment=comment)
 
     return(model)

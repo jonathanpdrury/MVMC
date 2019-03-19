@@ -40,18 +40,6 @@ for(i in 1:20){ #for 5 trees
 		bmm<-createModel_BM_MV(tree)
 		vcv_2<-getTipDistribution(bmm,params=c(0,0,0,0,0))$Sigma
 		data.sorted<-c(traits[rownames(vcv_2)[1:50],1],traits[rownames(vcv_2)[1:50],2])
-
-		ddm<-createModel_DDexp_MV_BETA(tree)
-		ddm.fit<-fitTipData(ddm,data.sorted,GLSstyle=TRUE)
-		
-		ddm.sig2_1<-exp(ddm.fit$inferredParams[3])
-		ddm.sig2_2<-exp(ddm.fit$inferredParams[4])
-		ddm.sig2_cov<-(ddm.fit$inferredParams[7])
-		ddm.r_1<-(ddm.fit$inferredParams[5])
-		ddm.r_2<-(ddm.fit$inferredParams[6])
-		ddm.r_cov<-(ddm.fit$inferredParams[8])
-		ddm.m0_1<-(ddm.fit$inferredParams[1])
-		ddm.m0_2<-(ddm.fit$inferredParams[2])
 		
 		bmm.fit<-mvBM(tree,traits,model="BM1")
 		if(bmm.fit$convergence!=0){
@@ -66,6 +54,19 @@ for(i in 1:20){ #for 5 trees
 		bmm.sig2_cov<-bmm.fit$sigma[2,1]
 		bmm.m0_1<-(bmm.fit$theta[1])
 		bmm.m0_2<-(bmm.fit$theta[2])
+
+		ddm<-createModel_DDexp_MV_BETA(tree)
+		params0=c(0,0,log(sqrt(bmm.sig2_1)),log(sqrt(bmm.sig2_2)),0,0,bmm.sig2_cov)
+		ddm.fit<-fitTipData(ddm,data.sorted,params0=params0,GLSstyle=TRUE)
+		
+		ddm.sig2_1<-exp(ddm.fit$inferredParams[3])
+		ddm.sig2_2<-exp(ddm.fit$inferredParams[4])
+		ddm.sig2_cov<-(ddm.fit$inferredParams[7])
+		ddm.r_1<-(ddm.fit$inferredParams[5])
+		ddm.r_2<-(ddm.fit$inferredParams[6])
+		ddm.r_cov<-(ddm.fit$inferredParams[8])
+		ddm.m0_1<-(ddm.fit$inferredParams[1])
+		ddm.m0_2<-(ddm.fit$inferredParams[2])
 
 		oum.fit<-mvOU(tree,traits,model="OU1")
 		if(oum.fit$convergence!=0){
@@ -90,7 +91,7 @@ for(i in 1:20){ #for 5 trees
 		
 		res.mat[counter,]<-int
 		print(int)
-		write.csv(res.mat,file="~/Dropbox/ddm_rpanda_fits_BETA_int_18032019_newconstraints.csv")
+		write.csv(res.mat,file="~/Dropbox/ddm_rpanda_fits_BETA_int_18032019_PDconstraints_BMstart.csv")
 		counter=counter+1
 		}
 	

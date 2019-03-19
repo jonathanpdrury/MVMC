@@ -94,7 +94,7 @@ for(i in 1:20){ #for 5 trees
 		
 		res.mat[counter,]<-int
 		print(int)
-		write.csv(res.mat,file="~/Dropbox/ddm_rpanda_fits_int_18032019_PDconstraints_BM_start.csv")
+		write.csv(res.mat,file="~/Dropbox/ddm_rpanda_fits_int_18032019_OLDconstraints_BM_start.csv")
 		counter=counter+1
 		}
 	
