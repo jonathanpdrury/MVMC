@@ -22,12 +22,10 @@ counter=1
 for(i in 1:20){ #for 5 trees
 
 	for(j in 2:2){ #for 3 sig2 matrices
-	
-		for(k in 1:1){ #for 3 slope matrices
+			
+		tree<-tree.list[[1]][[i]]
 		
-		tree<-tree.list[[2]][[i]]
-		
-		eval(parse(text=paste0("data<-DDexp_neg_sim_tree_50_root_sig2_",j,"_tip_sig2_",k,"_complete[[",i,"]]")))
+		data<-MC_sim_tree_20_sig2_2_half_life_2_pars_2_complete[[i]]
 		
 		traits = matrix(nrow=length(tree$tip.label),ncol=2)
 		for (l in 1:length(tree$tip.label)){
@@ -39,19 +37,19 @@ for(i in 1:20){ #for 5 trees
 
 		bmm<-createModel_BM_MV(tree)
 		vcv_2<-getTipDistribution(bmm,params=c(0,0,0,0,0))$Sigma
-		data.sorted<-c(traits[rownames(vcv_2)[1:50],1],traits[rownames(vcv_2)[1:50],2])
+		data.sorted<-c(traits[rownames(vcv_2)[1:20],1],traits[rownames(vcv_2)[1:20],2])
 
-		ddm<-createModel_DDexp_MV(tree)
-		ddm.fit<-fitTipData(ddm,data.sorted,GLSstyle=TRUE)
+		mcm<-createModel_MC_MV(tree)
+		mcm.fit<-fitTipData(mcm,data.sorted,GLSstyle=TRUE)
 		
-		ddm.sig2_1<-exp(ddm.fit$inferredParams[3])
-		ddm.sig2_2<-exp(ddm.fit$inferredParams[4])
-		ddm.sig2_cov<-(ddm.fit$inferredParams[7])
-		ddm.r_1<-(ddm.fit$inferredParams[5])
-		ddm.r_2<-(ddm.fit$inferredParams[6])
-		ddm.r_cov<-(ddm.fit$inferredParams[8])
-		ddm.m0_1<-(ddm.fit$inferredParams[1])
-		ddm.m0_2<-(ddm.fit$inferredParams[2])
+		mcm.sig2_1<-exp(mcm.fit$inferredParams[3])
+		mcm.sig2_2<-exp(mcm.fit$inferredParams[4])
+		mcm.sig2_cov<-(mcm.fit$inferredParams[7])
+		mcm.r_1<-(mcm.fit$inferredParams[5])
+		mcm.r_2<-(mcm.fit$inferredParams[6])
+		mcm.r_cov<-(mcm.fit$inferredParams[8])
+		mcm.m0_1<-(mcm.fit$inferredParams[1])
+		mcm.m0_2<-(mcm.fit$inferredParams[2])
 		
 		bmm.fit<-mvBM(tree,traits,model="BM1")
 		if(bmm.fit$convergence!=0){
