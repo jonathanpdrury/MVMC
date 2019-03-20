@@ -2,10 +2,10 @@
 #    Bank of Classic 1D Phenotypic Models
 ##################################################
 
-createModel_DDexp_MV_BETA <- function(tree){
+createModel_DDexp_MV_constrained <- function(tree){
     
 
-        comment <- "Multivariate_DDexp Model"
+        comment <- "Multivariate_DDexp Model (simplified)"
         paramsNames <- c("m0_1", "m0_2", "logsigma0_1","logsima0_2","r_1", "r_2","sigma0_cov")
         params0 <- c(0, 0, log(1),log(1),-0.1,-0.1,0)
         #paramsNames <- c("m0_1", "m0_2", "logsigma0_1","logsima0_2","sigma0_cov12")
@@ -28,10 +28,10 @@ createModel_DDexp_MV_BETA <- function(tree){
 
         #constraints <- function(params) return(params[3]<Inf && params[3] > -Inf && params[4]<Inf && params[4] > -Inf  && params[5]<Inf && params[5] > -Inf && (params[7]) <= exp(params[4])*exp(params[6]*length(tree$tip.label)) && (params[7]) <= exp(params[3])*exp(params[5]*length(tree$tip.label)) && params[7] <= params[3] && params[7] <= params[4])
         #constraints <- function(params) return(params[3]<Inf && params[3] > -Inf && params[4]<Inf && params[4] > -Inf  && params[5]<Inf && params[5] > -Inf && (abs(params[7]) <= exp(params[4])*exp(params[6]*length(tree$tip.label)) || abs(params[7])<= exp(params[3])*exp(params[5]*length(tree$tip.label))) && (abs(params[7]) <= exp(params[3]) || abs(params[7]) <= exp(params[4])))
-        constraints <- function(params) return(params[3]<Inf && params[3] > -Inf && params[4]<Inf && params[4] > -Inf && params[5]<Inf && params[5] > -Inf && all(sign(eigen(matrix(c(exp(params[3]),params[7],params[7],exp(params[4])),nrow=2))$values)!=-1) && all(sign(eigen(matrix(c(exp(params[3])*exp(params[5]*length(tree$tip.label)),params[7],params[7],exp(params[4])*exp(params[6]*length(tree$tip.label))),nrow=2))$values)!=-1))
-        #constraints <- function(params) return(params[3]<Inf && params[3] > -Inf && params[4]<Inf && params[4] > -Inf && params[5]<Inf && params[5] > -Inf)
+        #constraints <- function(params) return(params[3]<Inf && params[3] > -Inf && params[4]<Inf && params[4] > -Inf && params[5]<Inf && params[5] > -Inf && all(sign(eigen(matrix(c(exp(params[3]),params[7],params[7],exp(params[4])),nrow=2))$values)!=-1) && all(sign(eigen(matrix(c(exp(params[3])*exp(params[5]*length(tree$tip.label)),params[7],params[7],exp(params[4])*exp(params[6]*length(tree$tip.label))),nrow=2))$values)!=-1))
+        constraints <- function(params) return(params[3]<Inf && params[3] > -Inf && params[4]<Inf && params[4] > -Inf && params[5]<Inf && params[5] > -Inf)
         		
-		model <- new(Class="PhenotypicADiag", name="DDexp_MV", period=periodizing$periods, aAGamma=aAGamma, numbersCopy=eventEndOfPeriods$copy, numbersPaste=eventEndOfPeriods$paste, initialCondition=initialCondition, paramsNames=paramsNames, constraints=constraints, params0=params0, tipLabels=eventEndOfPeriods$labeling, comment=comment)
+		model <- new(Class="PhenotypicADiag", name="DDexp_MV_constrained", period=periodizing$periods, aAGamma=aAGamma, numbersCopy=eventEndOfPeriods$copy, numbersPaste=eventEndOfPeriods$paste, initialCondition=initialCondition, paramsNames=paramsNames, constraints=constraints, params0=params0, tipLabels=eventEndOfPeriods$labeling, comment=comment)
 
     return(model)
 }

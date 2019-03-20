@@ -2,10 +2,10 @@
 #    Bank of Classic 1D Phenotypic Models
 ##################################################
 
-createModel_DDlin_MV_BETA <- function(tree){
+createModel_DDlin_MV_constrained <- function(tree){
     
 
-        comment <- "Multivariate_DDlin Model"
+        comment <- "Multivariate_DDlin Model (simplified)"
         paramsNames <- c("m0_1", "m0_2", "logsigma0_1","logsima0_2","b_1", "b_2","sigma0_cov")
         params0 <- c(0, 0, log(1),log(1),-0.1,-0.1,0)
         #paramsNames <- c("m0_1", "m0_2", "logsigma0_1","logsima0_2","sigma0_cov12")
@@ -27,12 +27,12 @@ createModel_DDlin_MV_BETA <- function(tree){
             matrixA <- diag(0, length(vectorU)*2)
             return(list(a=vectorA, A=matrixA, Gamma=matrixGamma))
         }
-
+        constraints <- function(params) return(params[3]<Inf && params[3] > -Inf && params[4]<Inf && params[4] > -Inf && params[5]<Inf && params[5] > -Inf)
         #constraints <- function(params) return(params[3]<Inf && params[3] > -Inf && params[4]<Inf && params[4] > -Inf  && params[5]<Inf && params[5] > -Inf && (params[7]) <= exp(params[4])*exp(params[6]*length(tree$tip.label)) && (params[7]) <= exp(params[3])*exp(params[5]*length(tree$tip.label)) && params[7] <= params[3] && params[7] <= params[4])
         #constraints <- function(params) return(params[3]<Inf && params[3] > -Inf && params[4]<Inf && params[4] > -Inf && params[5]<Inf && params[5] > -Inf && ((abs(params[7]) <= (exp(params[4])+(params[6]*length(tree$tip.label)))) || (abs(params[7]) <= (exp(params[3])+(params[5]*length(tree$tip.label))))) && ((abs(params[7]) <= exp(params[3])) || (abs(params[7]) <= exp(params[4]))))
-        constraints <- function(params) return(params[3]<Inf && params[3] > -Inf && params[4]<Inf && params[4] > -Inf && params[5]<Inf && params[5] > -Inf  && all(sign(eigen(matrix(c(exp(params[3]),params[7],params[7],exp(params[4])),nrow=2))$values)!=-1)) && all(sign(eigen(matrix(c(exp(params[3])+(params[5]*length(tree$tip.label)),params[7]+(sqrt(params[5]*params[6])*length(tree$tip.label)),params[7]+(sqrt(params[5]*params[6])*length(tree$tip.label)),exp(params[4])+(params[6]*length(tree$tip.label))),nrow=2))$values)!=-1))
+        #constraints <- function(params) return(params[3]<Inf && params[3] > -Inf && params[4]<Inf && params[4] > -Inf && params[5]<Inf && params[5] > -Inf  && all(sign(eigen(matrix(c(exp(params[3]),params[7],params[7],exp(params[4])),nrow=2))$values)!=-1)) && all(sign(eigen(matrix(c(exp(params[3])+(params[5]*length(tree$tip.label)),params[7]+(sqrt(params[5]*params[6])*length(tree$tip.label)),params[7]+(sqrt(params[5]*params[6])*length(tree$tip.label)),exp(params[4])+(params[6]*length(tree$tip.label))),nrow=2))$values)!=-1))
 	
-	model <- new(Class="PhenotypicADiag", name="DDlin_MV", period=periodizing$periods, aAGamma=aAGamma, numbersCopy=eventEndOfPeriods$copy, numbersPaste=eventEndOfPeriods$paste, initialCondition=initialCondition, paramsNames=paramsNames, constraints=constraints, params0=params0, tipLabels=eventEndOfPeriods$labeling, comment=comment)
+	model <- new(Class="PhenotypicADiag", name="DDlin_MV_constrained", period=periodizing$periods, aAGamma=aAGamma, numbersCopy=eventEndOfPeriods$copy, numbersPaste=eventEndOfPeriods$paste, initialCondition=initialCondition, paramsNames=paramsNames, constraints=constraints, params0=params0, tipLabels=eventEndOfPeriods$labeling, comment=comment)
 
     return(model)
 }
