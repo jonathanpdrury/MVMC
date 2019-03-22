@@ -7,7 +7,7 @@ createModel_MC_MV_BETA <- function(tree){
 
         comment <- "Multivariate_MC Model"
         paramsNames <- c("m0_1", "m0_2", "logsigma0_1","logsima0_2","sigma0_cov12","S_1","S_2","S_cov")
-        params0 <- c(0, 0, log(1),log(1),0,0,0)
+        params0 <- c(0, 0, log(1),log(1),0,-0.1,-0.1,0)
 		ntraits<-2
 		
         periodizing <- periodizeOneTree(tree) 
@@ -25,7 +25,8 @@ createModel_MC_MV_BETA <- function(tree){
             return(list(a=vectorA, A=matrixA, Gamma=matrixGamma))
         }
 
-        constraints <- function(params) return(params[6]<=0 && params[7]<=0) && all(sign(eigen(matrix(c(exp(params[3]),params[5],params[5],exp(params[4])),nrow=2))$values)!=-1)) && all(sign(eigen(matrix(c(exp(params[3]),params[5],params[5],exp(params[4])),nrow=2))$values)!=-1))
+        constraints <- function(params) return(params[3] < Inf && params[4] < Inf && params[6]<0 && params[7]<0)
+        # && all(sign(eigen(matrix(c(exp(params[3]),params[5],params[5],exp(params[4])),nrow=2))$values)!=-1)) && all(sign(eigen(matrix(c(exp(params[3]),params[5],params[5],exp(params[4])),nrow=2))$values)!=-1))
         #how to constrain S_cov terms?
         
         model <- new(Class="PhenotypicModel", name="MC_MV", period=periodizing$periods, aAGamma=aAGamma, numbersCopy=eventEndOfPeriods$copy, numbersPaste=eventEndOfPeriods$paste, initialCondition=initialCondition, paramsNames=paramsNames, constraints=constraints, params0=params0, tipLabels=eventEndOfPeriods$labeling, comment=comment)
