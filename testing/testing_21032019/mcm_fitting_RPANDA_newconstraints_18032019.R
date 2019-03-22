@@ -23,7 +23,7 @@ colnames(res.mat)<-c("tree","tree.size","sig2.1","sig2.2","sig2.cov","root.1", "
 counter=3
 for(i in 3:20){ #for 20 trees
 
-	for(j in 1:1){ #for 3 sig2 matrices
+	for(j in 2:2){ #for 3 sig2 matrices
 			
 		tree<-tree.list[[1]][[i]]
 		
@@ -90,6 +90,8 @@ for(i in 3:20){ #for 20 trees
 		oum.alpha_2<-oum.fit$alpha[2,2]
 		oum.alpha_cov<-oum.fit$alpha[2,1]
 		k=1
+		
+		##pars list [[j]][[2]]
 		int<-c(i,20,sig2.matrices[[j]][1,1],sig2.matrices[[j]][2,2],sig2.matrices[[j]][2,1],0,0,pars.list[[2]][[j]][[k]][1,1],pars.list[[2]][[j]][[k]][2,2],pars.list[[2]][[j]][[k]][1,2],pars.list[[2]][[j]][[k]][2,1],mcm.sig2_1,mcm.sig2_2,mcm.sig2_cov,mcm.m0_1,mcm.m0_2,mcm.S_1,mcm.S_2,mcm.S_12cov,mcm.S_21cov,-mcm.fit$value, mcm.fit$convergence,bmm.sig2_1,bmm.sig2_2,bmm.sig2_cov,bmm.m0_1,bmm.m0_2,bmm.fit$LogLik, bmm.fit$convergence,oum.sig2_1,oum.sig2_2,oum.sig2_cov,oum.m0_1,oum.m0_2,oum.alpha_1,oum.alpha_2,oum.alpha_cov,oum.fit$LogLik, oum.fit$convergence)
 		
 		res.mat[counter,]<-int
