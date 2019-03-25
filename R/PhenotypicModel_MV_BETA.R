@@ -290,7 +290,8 @@ setMethod(
 #            print(Gammai(times[1]))
 #            print(Ai)
 #            print(ai)
-            if((object@period[i+1]-object@period[i])> 1e-15 ){
+#			if((object@period[i+1]-object@period[i])> 1e-15 ){
+            if((object@period[i+1]-object@period[i])> 1e-14 ){
                 mean  <- ode(mean, times, derivativemean)[2, 2:(n+1)]
                 sigma <- ode(as.vector(Sigma), times, derivativeSigma)[2, 2:(n*n+1)]
             }
