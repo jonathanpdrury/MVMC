@@ -413,7 +413,10 @@ setMethod(
 #                    m0 <-solve(t(I)%*%IV%*%I)%*%t(I)%*%IV%*%as.matrix(data)[,1]
                     I=kronecker(diag(2),matrix(1,ncol=1,nrow=(n/2)))
 					
-					m0 = solve(t(I)%*%IV%*%I)%*%t(I)%*%IV%*%data
+					m0 = try(solve(t(I)%*%IV%*%I)%*%t(I)%*%IV%*%data)
+					if(class(m0)=="try-error"){
+					m0 = pseudoinverse(t(I)%*%IV%*%I)%*%t(I)%*%IV%*%data
+					}
 					m0_1 = m0[1]
 					m0_2 = m0[2]
 					
@@ -455,7 +458,10 @@ setMethod(
 		    #data<-data[rownames(V)]
             I=kronecker(diag(2),matrix(1,ncol=1,nrow=(n/2)))
 					
-			m0 = solve(t(I)%*%IV%*%I)%*%t(I)%*%IV%*%data
+			m0 = try(solve(t(I)%*%IV%*%I)%*%t(I)%*%IV%*%data)
+			if(class(m0)=="try-error"){
+					m0 = pseudoinverse(t(I)%*%IV%*%I)%*%t(I)%*%IV%*%data
+			}
 			m0_1 = m0[1]
 			m0_2 = m0[2]
             
