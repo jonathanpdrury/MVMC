@@ -58,16 +58,16 @@ for(i in 2:20){ #for 20 trees
 		params0=c(0,0,log(sqrt(bmm.sig2_1)),log(sqrt(bmm.sig2_2)),bmm.sig2_cov,-0.1,-0.1,0,0)
 		mcm.fit<-fitTipData(mcm,data.sorted,params0=params0,GLSstyle=TRUE)
 		
-		mcm.sig2_1<-exp(mcm.fit$inferredParams[3])^2 + (mcm.fit$inferredParams[7]^2)
-		mcm.sig2_2<-exp(mcm.fit$inferredParams[4])^2 + (mcm.fit$inferredParams[7]^2)
-		mcm.sig2_cov<-(mcm.fit$inferredParams[7]) * (exp(mcm.fit$inferredParams[3])+exp(mcm.fit$inferredParams[4]))
-		mcm.S_1<-(mcm.fit$inferredParams[5])
-		mcm.S_2<-(mcm.fit$inferredParams[6])
+		mcm.sig2_1<-exp(mcm.fit$inferredParams[3])^2 + (mcm.fit$inferredParams[5]^2)
+		mcm.sig2_2<-exp(mcm.fit$inferredParams[4])^2 + (mcm.fit$inferredParams[5]^2)
+		mcm.sig2_cov<-(mcm.fit$inferredParams[5]) * (exp(mcm.fit$inferredParams[3])+exp(mcm.fit$inferredParams[4]))
+		mcm.S_1<-(mcm.fit$inferredParams[6])
+		mcm.S_2<-(mcm.fit$inferredParams[7])
 		mcm.S_12cov<-(mcm.fit$inferredParams[8])
 		mcm.S_21cov<-(mcm.fit$inferredParams[9])
 		mcm.m0_1<-(mcm.fit$inferredParams[1])
 		mcm.m0_2<-(mcm.fit$inferredParams[2])
-		
+        
 		oum.fit<-mvOU(tree,traits,model="OU1")
 		if(oum.fit$convergence!=0){
 			oum.fit<-mvOU(tree,traits,model="OU1",method="sparse")
